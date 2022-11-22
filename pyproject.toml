@@ -1,0 +1,79 @@
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+addopts = "--cov=httpx_ws/ --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.hatch]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.version]
+source = "regex_commit"
+commit_extra_args = ["-e"]
+path = "httpx_ws/__init__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+    "black",
+    "isort",
+    "mypy",
+    "ruff",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest"
+test-cov-xml = "pytest --cov-report=xml"
+lint = [
+  "isort ./httpx_ws ./tests",
+  "black .",
+  "ruff --fix .",
+  "mypy httpx_ws/",
+]
+lint-check = [
+  "isort --check-only ./httpx_ws ./tests",
+  "black --check .",
+  "ruff .",
+  "mypy httpx_ws/",
+]
+
+[tool.hatch.build.targets.sdist]
+support-legacy = true  # Create setup.py
+
+[build-system]
+requires = ["hatchling", "hatch-regex-commit"]
+build-backend = "hatchling.build"
+
+[project]
+name = "httpx-ws"
+authors = [
+  { name = "François Voron", email = "fvoron@gmail.com" }
+]
+description = "WebSockets support for HTTPX"
+readme = "README.md"
+dynamic = ["version"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Internet :: WWW/HTTP :: Session",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "httpx"
+]
+
+[project.urls]
+Documentation = "https://github.com/frankie567/httpx-ws"
+Source = "https://github.com/frankie567/httpx-ws"
