@@ -74,7 +74,8 @@ requires-python = ">=3.7"
 dependencies = [
     "anyio",
     "httpx",
-    "wsproto"
+    "wsproto",
+    "typing-extensions; python_version < '3.8'",
 ]
 
 [project.urls]
