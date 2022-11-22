@@ -14,8 +14,40 @@ WebSockets support for HTTPX
 
 ## Installation
 
+> Not released on PyPI yet 😅
+
 ```bash
 pip install httpx-ws
+```
+
+## Quickstart
+
+`httpx-ws` provides `connect_ws` and `aconnect_ws` to help connecting and communication with WebSockets. The resulting `WebSocketSession`/`AsyncWebSocketSession` object provides helpers to send and receive messages in the WebSocket.
+
+**Sync**
+
+```py
+import httpx
+from httpx_ws import connect_ws
+
+with httpx.Client() as client:
+    with connect_ws(client, "http://localhost:8000/ws") as ws:
+        message = ws.receive_text()
+        print(message)
+        ws.send_text("Hello!")
+```
+
+**Async**
+
+```py
+import httpx
+from httpx_ws import aconnect_ws
+
+async with httpx.AsyncClient() as client:
+    async with aconnect_ws(client, "http://localhost:8000/ws") as ws:
+        message = await ws.receive_text()
+        print(message)
+        await ws.send_text("Hello!")
 ```
 
 ## Development
