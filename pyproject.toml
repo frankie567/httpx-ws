@@ -25,7 +25,7 @@ dependencies = [
     "pytest-asyncio",
     "pytest-cov",
     "starlette",
-    "uvicorn",
+     "uvicorn[standard]",
 ]
 
 [tool.hatch.envs.default.scripts]
