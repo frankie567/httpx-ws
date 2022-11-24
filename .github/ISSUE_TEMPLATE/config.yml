@@ -1,0 +1,4 @@
+contact_links:
+  - name: I have a question 🤔
+    url: https://github.com/frankie567/httpx-ws/discussions
+    about: If you have any question about httpx-ws that's not clearly a bug, please open a discussion first.
