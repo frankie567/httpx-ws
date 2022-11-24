@@ -14,7 +14,7 @@ WebSockets support for HTTPX
 
 ## Installation
 
-> Not released on PyPI yet 😅
+> ⚠️ This is a very young project. Expect bugs 🐛
 
 ```bash
 pip install httpx-ws
