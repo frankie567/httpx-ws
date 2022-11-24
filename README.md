@@ -113,10 +113,10 @@ from httpx_ws import aconnect_ws
 from httpx_ws.transport import ASGIWebSocketTransport
 
 async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
-    http_response = await client.get("/http")
+    http_response = await client.get("http://server/http")
     assert http_response.status_code == 200
 
-    async with aconnect_ws("/ws", client) as ws:
+    async with aconnect_ws("http://server/ws", client) as ws:
         message = await ws.receive_text()
         assert message == "Hello World!"
 ```
