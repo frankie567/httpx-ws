@@ -47,6 +47,10 @@ class WebSocketSession:
         self.connection = wsproto.Connection(wsproto.ConnectionType.CLIENT)
         self._events: typing.Deque[wsproto.events.Event] = collections.deque()
 
+    def ping(self) -> None:
+        event = wsproto.events.Ping()
+        self._send_event(event)
+
     def send(self, event: wsproto.events.Event) -> None:
         self._send_event(event)
 
@@ -119,6 +123,10 @@ class AsyncWebSocketSession:
         self.stream: AsyncNetworkStream = response.extensions["network_stream"]
         self.connection = wsproto.Connection(wsproto.ConnectionType.CLIENT)
         self._events: typing.Deque[wsproto.events.Event] = collections.deque()
+
+    async def ping(self) -> None:
+        event = wsproto.events.Ping()
+        await self._send_event(event)
 
     async def send(self, event: wsproto.events.Event) -> None:
         await self._send_event(event)
