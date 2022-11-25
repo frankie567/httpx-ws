@@ -74,7 +74,8 @@ classifiers = [
 requires-python = ">=3.7"
 dependencies = [
     "anyio",
-    "httpx",
+    "httpx>=0.23.1",
+    "httpcore>=0.16.1",
     "wsproto",
     "typing-extensions; python_version < '3.8'",
 ]
