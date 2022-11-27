@@ -85,5 +85,5 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/frankie567/httpx-ws"
+Documentation = "https://frankie567.github.io/httpx-ws/"
 Source = "https://github.com/frankie567/httpx-ws"
