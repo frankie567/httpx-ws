@@ -27,6 +27,7 @@ dependencies = [
     "starlette",
     "uvicorn[standard]",
     "mkdocs-material",
+    "mkdocstrings[python]",
 ]
 
 [tool.hatch.envs.default.scripts]
