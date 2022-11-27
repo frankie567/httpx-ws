@@ -46,6 +46,7 @@ lint-check = [
   "mypy httpx_ws/",
 ]
 docs-serve = "mkdocs serve"
+docs-build = "mkdocs build"
 
 [tool.hatch.build.targets.sdist]
 support-legacy = true  # Create setup.py

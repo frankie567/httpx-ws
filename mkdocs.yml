@@ -62,4 +62,4 @@ nav:
           - Quickstart: usage/quickstart.md
           - Testing ASGI: usage/asgi.md
     - Reference:
-        httpx_ws: reference/httpx_ws.md
+        - httpx_ws: reference/httpx_ws.md
