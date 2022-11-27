@@ -25,7 +25,8 @@ dependencies = [
     "pytest-asyncio",
     "pytest-cov",
     "starlette",
-     "uvicorn[standard]",
+    "uvicorn[standard]",
+    "mkdocs-material",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -43,6 +44,7 @@ lint-check = [
   "ruff .",
   "mypy httpx_ws/",
 ]
+docs-serve = "mkdocs serve"
 
 [tool.hatch.build.targets.sdist]
 support-legacy = true  # Create setup.py

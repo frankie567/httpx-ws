@@ -1,4 +1,4 @@
-# httpx-ws
+# HTTPX WS
 
 WebSockets support for HTTPX
 
