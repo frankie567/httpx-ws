@@ -27,11 +27,17 @@ theme:
               icon: material/brightness-4
               name: Switch to light mode
 
+    features:
+        - navigation.tracking
+        - navigation.sections
+
 markdown_extensions:
     - toc:
           permalink: true
     - pymdownx.highlight:
           anchor_linenums: true
+    - pymdownx.tasklist:
+          custom_checkbox: true
     - pymdownx.inlinehilite
     - pymdownx.snippets
     - pymdownx.superfences
@@ -39,17 +45,21 @@ markdown_extensions:
 plugins:
     - search
     - mkdocstrings:
-        handlers:
-            python:
-                import:
-                    - https://docs.python.org/3.7/objects.inv
-                    - https://python-hyper.org/projects/wsproto/en/stable/objects.inv
-                options:
-                    docstring_style: google
+          handlers:
+              python:
+                  import:
+                      - https://docs.python.org/3.7/objects.inv
+                      - https://python-hyper.org/projects/wsproto/en/stable/objects.inv
+                  options:
+                      docstring_style: google
 
 watch:
     - httpx_ws
 
 nav:
     - About: index.md
-    - Reference: reference.md
+    - Usage:
+          - Quickstart: usage/quickstart.md
+          - Testing ASGI: usage/asgi.md
+    - Reference:
+        httpx_ws: reference/httpx_ws.md
