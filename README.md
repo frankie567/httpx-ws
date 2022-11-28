@@ -37,7 +37,7 @@ pip install httpx-ws
 * [X] Helper methods to receive text, binary and JSON data
 * [X] Automatic ping/pong answers
 * [X] HTTPX transport to test WebSockets defined in ASGI apps
-* [ ] Automatic keepalive ping
+* [X] Automatic keepalive ping
 
 ## Contributors ✨
 
