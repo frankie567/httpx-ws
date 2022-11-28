@@ -24,7 +24,9 @@
 
 ## Installation
 
-> ⚠️ This is a very young project. Expect bugs 🐛
+> **Warning**
+>
+> This is a very young project. Expect bugs 🐛
 
 ```bash
 pip install httpx-ws
