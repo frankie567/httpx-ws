@@ -1,5 +1,5 @@
-[tool.isort]
-profile = "black"
+[tool.ruff]
+extend-select = ["I"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=httpx_ws/ --cov-report=term-missing"
@@ -18,7 +18,6 @@ path = "httpx_ws/__init__.py"
 [tool.hatch.envs.default]
 dependencies = [
     "black",
-    "isort",
     "mypy",
     "ruff",
     "pytest",
@@ -34,13 +33,11 @@ dependencies = [
 test = "pytest"
 test-cov-xml = "pytest --cov-report=xml"
 lint = [
-  "isort ./httpx_ws ./tests",
   "black .",
   "ruff --fix .",
   "mypy httpx_ws/",
 ]
 lint-check = [
-  "isort --check-only ./httpx_ws ./tests",
   "black --check .",
   "ruff .",
   "mypy httpx_ws/",
