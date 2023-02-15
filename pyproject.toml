@@ -3,7 +3,7 @@ extend-select = ["I"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=httpx_ws/ --cov-report=term-missing"
-asyncio_mode = "auto"
+asyncio_mode = "strict"
 
 [tool.hatch]
 
