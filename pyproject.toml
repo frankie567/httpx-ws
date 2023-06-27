@@ -65,20 +65,18 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Internet :: WWW/HTTP :: Session",
 ]
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 dependencies = [
     "anyio",
     "httpx>=0.23.1",
     "httpcore>=0.16.1",
     "wsproto",
-    "typing-extensions; python_version < '3.8'",
 ]
 
 [project.urls]

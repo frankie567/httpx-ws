@@ -48,7 +48,7 @@ plugins:
           handlers:
               python:
                   import:
-                      - https://docs.python.org/3.7/objects.inv
+                      - https://docs.python.org/3.8/objects.inv
                       - https://python-hyper.org/projects/wsproto/en/stable/objects.inv
                   options:
                       docstring_style: google
