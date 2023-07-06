@@ -42,6 +42,15 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "saforem2",
+      "name": "Sam Foreman",
+      "avatar_url": "https://avatars.githubusercontent.com/u/5234251?v=4",
+      "profile": "https://samforeman.me",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
@@ -49,5 +58,6 @@
   "repoType": "github",
   "repoHost": "https://github.com",
   "projectName": "httpx-ws",
-  "projectOwner": "frankie567"
+  "projectOwner": "frankie567",
+  "commitType": "docs"
 }
