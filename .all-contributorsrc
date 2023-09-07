@@ -51,6 +51,16 @@
       "contributions": [
         "bug"
       ]
+    },
+    {
+      "login": "maparent",
+      "name": "Marc-Antoine Parent",
+      "avatar_url": "https://avatars.githubusercontent.com/u/202691?v=4",
+      "profile": "http://maparent.ca/",
+      "contributions": [
+        "bug",
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
