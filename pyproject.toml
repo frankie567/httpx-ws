@@ -1,5 +1,6 @@
 [tool.ruff]
-extend-select = ["I"]
+target-version = "py38"
+extend-select = ["I", "UP"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=httpx_ws/ --cov-report=term-missing"
