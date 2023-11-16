@@ -18,7 +18,6 @@ path = "httpx_ws/__init__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
-    "black",
     "mypy",
     "ruff",
     "pytest",
@@ -34,12 +33,12 @@ dependencies = [
 test = "pytest"
 test-cov-xml = "pytest --cov-report=xml"
 lint = [
-  "black .",
+  "ruff format .",
   "ruff --fix .",
   "mypy httpx_ws/",
 ]
 lint-check = [
-  "black --check .",
+  "ruff format --check .",
   "ruff .",
   "mypy httpx_ws/",
 ]
