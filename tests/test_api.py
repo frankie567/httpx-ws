@@ -856,7 +856,7 @@ async def test_default_httpx_client():
 
 
 @pytest.mark.asyncio
-async def test_subprotocol():
+async def test_subprotocol_and_response():
     def handler(request):
         assert (
             request.headers["sec-websocket-protocol"]
@@ -895,7 +895,9 @@ async def test_subprotocol():
             client,
             subprotocols=["custom_protocol", "unsupported_protocol"],
         ) as ws:
+            assert isinstance(ws.response, httpx.Response)
             assert ws.subprotocol == "custom_protocol"
+            assert ws.response.headers["sec-websocket-protocol"] == ws.subprotocol
 
     async with httpx.AsyncClient(
         base_url="http://localhost:8000", transport=httpx.MockTransport(async_handler)
@@ -905,4 +907,6 @@ async def test_subprotocol():
             client,
             subprotocols=["custom_protocol", "unsupported_protocol"],
         ) as aws:
+            assert isinstance(aws.response, httpx.Response)
             assert aws.subprotocol == "custom_protocol"
+            assert aws.response.headers["sec-websocket-protocol"] == aws.subprotocol
