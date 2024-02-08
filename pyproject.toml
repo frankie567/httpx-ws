@@ -1,5 +1,7 @@
 [tool.ruff]
 target-version = "py38"
+
+[tool.ruff.lint]
 extend-select = ["I", "UP"]
 
 [tool.pytest.ini_options]
@@ -27,6 +29,7 @@ dependencies = [
     "uvicorn[standard]",
     "mkdocs-material",
     "mkdocstrings[python]",
+    "trio"
 ]
 
 [tool.hatch.envs.default.scripts]
