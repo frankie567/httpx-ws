@@ -24,10 +24,6 @@
 
 ## Installation
 
-> **Warning**
->
-> This is a very young project. Expect bugs 🐛
-
 ```bash
 pip install httpx-ws
 ```
@@ -40,6 +36,7 @@ pip install httpx-ws
 * [X] Automatic ping/pong answers
 * [X] HTTPX transport to test WebSockets defined in ASGI apps
 * [X] Automatic keepalive ping
+* [X] `asyncio` and [Trio](https://trio.readthedocs.io/) support through [AnyIO](https://anyio.readthedocs.io/)
 
 ## Contributors ✨
 
