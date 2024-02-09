@@ -6,7 +6,6 @@ extend-select = ["I", "UP"]
 
 [tool.pytest.ini_options]
 addopts = "--cov=httpx_ws/ --cov-report=term-missing"
-asyncio_mode = "strict"
 
 [tool.hatch]
 
@@ -28,7 +27,8 @@ dependencies = [
     "uvicorn[standard]",
     "mkdocs-material",
     "mkdocstrings[python]",
-    "trio"
+    "trio",
+    "flaky"
 ]
 
 [tool.hatch.envs.default.scripts]
