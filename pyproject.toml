@@ -23,7 +23,6 @@ dependencies = [
     "mypy",
     "ruff",
     "pytest",
-    "pytest-asyncio",
     "pytest-cov",
     "starlette",
     "uvicorn[standard]",
