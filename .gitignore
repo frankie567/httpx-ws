@@ -109,6 +109,3 @@ ENV/
 
 # .idea
 .idea/
-
-# VSCode
-.vscode
