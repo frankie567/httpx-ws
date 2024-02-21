@@ -104,6 +104,11 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 await self.send({"type": "websocket.receive", "text": event.data})
             elif isinstance(event, wsproto.events.BytesMessage):
                 await self.send({"type": "websocket.receive", "bytes": event.data})
+            elif isinstance(event, wsproto.events.Ping):
+                data = self.connection.send(event.response())
+                await self.write(data)
+            elif isinstance(event, wsproto.events.Pong):
+                pass
             else:
                 raise UnhandledWebSocketEvent(event)
 
