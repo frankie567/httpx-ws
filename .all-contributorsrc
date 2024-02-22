@@ -63,6 +63,26 @@
       ]
     },
     {
+      "login": "Kludex",
+      "name": "Marcelo Trylesinski",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7353520?v=4",
+      "profile": "https://www.fastapiexpert.com/",
+      "contributions": [
+        "bug",
+        "research"
+      ]
+    },
+    {
+      "login": "MtkN1",
+      "name": "MtkN1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/51289448?v=4",
+      "profile": "https://lit.link/MtkN1",
+      "contributions": [
+        "bug",
+        "research"
+      ]
+    }
+    {
       "login": "tomchristie",
       "name": "Tom Christie",
       "avatar_url": "https://avatars.githubusercontent.com/u/647359?v=4",
