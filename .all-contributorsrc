@@ -61,6 +61,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "tomchristie",
+      "name": "Tom Christie",
+      "avatar_url": "https://avatars.githubusercontent.com/u/647359?v=4",
+      "profile": "http://www.tomchristie.com/",
+      "contributions": [
+        "bug",
+        "research"
+      ]
     }
   ],
   "contributorsPerLine": 7,
