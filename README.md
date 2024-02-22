@@ -61,6 +61,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="http://maparent.ca/"><img src="https://avatars.githubusercontent.com/u/202691?v=4?s=100" width="100px;" alt="Marc-Antoine Parent"/><br /><sub><b>Marc-Antoine Parent</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3Amaparent" title="Bug reports">🐛</a> <a href="https://github.com/frankie567/httpx-ws/commits?author=maparent" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://www.fastapiexpert.com/"><img src="https://avatars.githubusercontent.com/u/7353520?v=4?s=100" width="100px;" alt="Marcelo Trylesinski"/><br /><sub><b>Marcelo Trylesinski</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3AKludex" title="Bug reports">🐛</a> <a href="#research-Kludex" title="Research">🔬</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://lit.link/MtkN1"><img src="https://avatars.githubusercontent.com/u/51289448?v=4?s=100" width="100px;" alt="MtkN1"/><br /><sub><b>MtkN1</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3AMtkN1" title="Bug reports">🐛</a> <a href="#research-MtkN1" title="Research">🔬</a></td>
+    </tr>
   </tbody>
 </table>
 
