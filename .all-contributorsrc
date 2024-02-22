@@ -61,6 +61,16 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "Kludex",
+      "name": "Marcelo Trylesinski",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7353520?v=4",
+      "profile": "https://www.fastapiexpert.com/",
+      "contributions": [
+        "bug",
+        "research"
+      ]
     }
   ],
   "contributorsPerLine": 7,
