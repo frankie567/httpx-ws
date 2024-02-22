@@ -64,6 +64,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://lit.link/MtkN1"><img src="https://avatars.githubusercontent.com/u/51289448?v=4?s=100" width="100px;" alt="MtkN1"/><br /><sub><b>MtkN1</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3AMtkN1" title="Bug reports">🐛</a> <a href="#research-MtkN1" title="Research">🔬</a></td>
       <td align="center" valign="top" width="14.28%"><a href="http://www.tomchristie.com/"><img src="https://avatars.githubusercontent.com/u/647359?v=4?s=100" width="100px;" alt="Tom Christie"/><br /><sub><b>Tom Christie</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3Atomchristie" title="Bug reports">🐛</a> <a href="#research-tomchristie" title="Research">🔬</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/dmontagu"><img src="https://avatars.githubusercontent.com/u/35119617?v=4?s=100" width="100px;" alt="David Montague"/><br /><sub><b>David Montague</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3Admontagu" title="Bug reports">🐛</a></td>
     </tr>
   </tbody>
 </table>
