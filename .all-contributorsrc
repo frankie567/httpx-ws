@@ -91,6 +91,15 @@
         "bug",
         "research"
       ]
+    },
+    {
+      "login": "dmontagu",
+      "name": "David Montague",
+      "avatar_url": "https://avatars.githubusercontent.com/u/35119617?v=4",
+      "profile": "https://github.com/dmontagu",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
