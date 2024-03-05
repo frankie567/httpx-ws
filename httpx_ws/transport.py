@@ -1,7 +1,6 @@
 import contextlib
 import queue
 import typing
-from concurrent.futures import Future
 
 import anyio
 import wsproto
@@ -44,11 +43,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def __aenter__(
         self,
     ) -> typing.Tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
-        self.exit_stack = contextlib.ExitStack()
-        self.portal = self.exit_stack.enter_context(
-            anyio.from_thread.start_blocking_portal("asyncio")
-        )
-        _: "Future[None]" = self.portal.start_task_soon(self._run)
+        self.exit_stack = contextlib.AsyncExitStack()
+        self.tg = await self.exit_stack.enter_async_context(anyio.create_task_group())
+        self.tg.start_soon(self._run)
+        self._app_finished = anyio.Event()
 
         await self.send({"type": "websocket.connect"})
         message = await self.receive()
@@ -108,8 +106,11 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 raise UnhandledWebSocketEvent(event)
 
     async def aclose(self) -> None:
-        await self.send({"type": "websocket.close"})
-        self.exit_stack.close()
+        with anyio.CancelScope(shield=True):
+            await self.send({"type": "websocket.close"})
+            await self._app_finished.wait()
+        # await self.exit_stack.aclose()  # This errors with:
+        # RuntimeError: Attempted to exit a cancel scope that isn't the current tasks's current cancel scope
 
     async def send(self, message: Message) -> None:
         self._receive_queue.put(message)
@@ -120,9 +121,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         return self._send_queue.get(timeout=timeout)
 
     async def _run(self) -> None:
-        """
-        The sub-thread in which the websocket session runs.
-        """
+        """The task in which the websocket session runs."""
         scope = self.scope
         receive = self._asgi_receive
         send = self._asgi_send
@@ -135,6 +134,8 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 "reason": str(e),
             }
             await self._asgi_send(message)
+        finally:
+            self._app_finished.set()
 
     async def _asgi_receive(self) -> Message:
         while self._receive_queue.empty():
