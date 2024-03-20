@@ -21,7 +21,7 @@ path = "httpx_ws/__init__.py"
 dependencies = [
     "mypy",
     "ruff",
-    "pytest",
+    "pytest<8",
     "pytest-cov",
     "starlette",
     "uvicorn[standard]",
