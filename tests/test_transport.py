@@ -58,6 +58,7 @@ class TestASGIWebSocketAsyncNetworkStream:
             received_messages.append(message)
             while message["type"] != "websocket.close":
                 message = await receive()
+                print('UPA!')
                 received_messages.append(message)
 
         connection = wsproto.connection.Connection(wsproto.connection.CLIENT)
