@@ -18,6 +18,7 @@ commit_extra_args = ["-e"]
 path = "httpx_ws/__init__.py"
 
 [tool.hatch.envs.default]
+installer = "uv"
 dependencies = [
     "mypy",
     "ruff",
