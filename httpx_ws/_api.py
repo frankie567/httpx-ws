@@ -93,7 +93,7 @@ class WebSocketSession:
     def _get_executor_should_close_task(
         self,
     ) -> typing.Tuple[
-        concurrent.futures.ThreadPoolExecutor, concurrent.futures.Future[bool]
+        concurrent.futures.ThreadPoolExecutor, "concurrent.futures.Future[bool]"
     ]:
         if self._should_close_task is None:
             self._executor = concurrent.futures.ThreadPoolExecutor()
