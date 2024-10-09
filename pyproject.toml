@@ -1,5 +1,5 @@
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 
 [tool.ruff.lint]
 extend-select = ["I", "UP"]
@@ -68,7 +68,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -76,7 +75,7 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Internet :: WWW/HTTP :: Session",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "anyio>=4",
     "httpx>=0.23.1",
