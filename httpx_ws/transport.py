@@ -4,6 +4,7 @@ import typing
 from concurrent.futures import Future
 
 import anyio
+import anyio.from_thread
 import wsproto
 from httpcore import AsyncNetworkStream
 from httpx import ASGITransport, AsyncByteStream, Request, Response
@@ -43,11 +44,9 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
     async def __aenter__(
         self,
-    ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
+    ) -> tuple["ASGIWebSocketAsyncNetworkStream", typing.Iterator[bytes]]:
         self.exit_stack = contextlib.ExitStack()
-        self.portal = self.exit_stack.enter_context(
-            anyio.from_thread.start_blocking_portal("asyncio")
-        )
+        self.portal = self.exit_stack.enter_context(anyio.from_thread.start_blocking_portal("asyncio"))
         _: Future[None] = self.portal.start_task_soon(self._run)
 
         await self.send({"type": "websocket.connect"})
@@ -57,15 +56,21 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             await self.aclose()
             raise WebSocketDisconnect(message["code"], message.get("reason"))
 
-        assert message["type"] == "websocket.accept"
-        return self, self._build_accept_response(message)
+        if message["type"] == "websocket.http.response.start":
+            status_code = message["status"]
+            headers = message["headers"]
+            message = await self.receive()
+            assert message["type"] == "websocket.http.response.body"
+            assert message["more_body"] is False, "We don't support streaming response on WebSocket Denial Response."
+            return self, self._build_denial_response(status_code, headers, message["body"])
+        else:
+            assert message["type"] == "websocket.accept"
+            return self, self._build_accept_response(message)
 
     async def __aexit__(self, *args: typing.Any) -> None:
         await self.aclose()
 
-    async def read(
-        self, max_bytes: int, timeout: typing.Optional[float] = None
-    ) -> bytes:
+    async def read(self, max_bytes: int, timeout: typing.Optional[float] = None) -> bytes:
         message: Message = await self.receive(timeout=timeout)
         type = message["type"]
 
@@ -85,9 +90,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
         return self.connection.send(event)
 
-    async def write(
-        self, buffer: bytes, timeout: typing.Optional[float] = None
-    ) -> None:
+    async def write(self, buffer: bytes, timeout: typing.Optional[float] = None) -> None:
         self.connection.receive_data(buffer)
         for event in self.connection.events():
             if isinstance(event, wsproto.events.Request):
@@ -144,15 +147,18 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def _asgi_send(self, message: Message) -> None:
         self._send_queue.put(message)
 
-    def _build_accept_response(self, message: Message) -> bytes:
+    def _build_accept_response(self, message: Message) -> typing.Iterator[bytes]:
         subprotocol = message.get("subprotocol", None)
         headers = message.get("headers", [])
-        return self.connection.send(
-            wsproto.events.AcceptConnection(
-                subprotocol=subprotocol,
-                extra_headers=headers,
-            )
+        yield self.connection.send(wsproto.events.AcceptConnection(subprotocol=subprotocol, extra_headers=headers))
+
+    def _build_denial_response(
+        self, status_code: int, headers: list[tuple[bytes, bytes]], data: bytes
+    ) -> typing.Iterator[bytes]:
+        yield self.connection.send(
+            wsproto.events.RejectConnection(status_code=status_code, headers=headers, has_body=True)
         )
+        yield self.connection.send(wsproto.events.RejectData(data))
 
 
 class ASGIWebSocketTransport(ASGITransport):
@@ -166,9 +172,7 @@ class ASGIWebSocketTransport(ASGITransport):
 
         if scheme in {"ws", "wss"} or headers.get("upgrade") == "websocket":
             subprotocols: list[str] = []
-            if (
-                subprotocols_header := headers.get("sec-websocket-protocol")
-            ) is not None:
+            if (subprotocols_header := headers.get("sec-websocket-protocol")) is not None:
                 subprotocols = subprotocols_header.split(",")
 
             scope = {
