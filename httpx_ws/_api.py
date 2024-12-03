@@ -29,6 +29,8 @@ from .transport import ASGIWebSocketAsyncNetworkStream
 JSONMode = typing.Literal["text", "binary"]
 TaskFunction = typing.TypeVar("TaskFunction")
 TaskResult = typing.TypeVar("TaskResult")
+SyncSession = typing.TypeVar("SyncSession", bound="WebSocketSession")
+AsyncSession = typing.TypeVar("AsyncSession", bound="AsyncWebSocketSession")
 
 DEFAULT_MAX_MESSAGE_SIZE_BYTES = 65_536
 DEFAULT_QUEUE_SIZE = 512
@@ -1074,8 +1076,9 @@ def _connect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
+    session_class: type[SyncSession] = WebSocketSession,
     **kwargs: typing.Any,
-) -> typing.Generator[WebSocketSession, None, None]:
+) -> typing.Generator[SyncSession, None, None]:
     headers = kwargs.pop("headers", {})
     headers.update(_get_headers(subprotocols))
 
@@ -1083,14 +1086,15 @@ def _connect_ws(
         if response.status_code != 101:
             raise WebSocketUpgradeError(response)
 
-        with WebSocketSession(
+        session = session_class(
             response.extensions["network_stream"],
             max_message_size_bytes=max_message_size_bytes,
             queue_size=queue_size,
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
             response=response,
-        ) as session:
+        )
+        with session:
             yield session
 
 
@@ -1108,8 +1112,9 @@ def connect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
+    session_class: type[SyncSession] = WebSocketSession,
     **kwargs: typing.Any,
-) -> typing.Generator[WebSocketSession, None, None]:
+) -> typing.Generator[SyncSession, None, None]:
     """
     Start a sync WebSocket session.
 
@@ -1176,6 +1181,7 @@ def connect_ws(
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
                 keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
                 subprotocols=subprotocols,
+                session_class=session_class,
                 **kwargs,
             ) as websocket:
                 yield websocket
@@ -1188,6 +1194,7 @@ def connect_ws(
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
             subprotocols=subprotocols,
+            session_class=session_class,
             **kwargs,
         ) as websocket:
             yield websocket
@@ -1207,8 +1214,9 @@ async def _aconnect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
+    session_class: type[AsyncSession] = AsyncWebSocketSession,
     **kwargs: typing.Any,
-) -> typing.AsyncGenerator[AsyncWebSocketSession, None]:
+) -> typing.AsyncGenerator[AsyncSession, None]:
     headers = kwargs.pop("headers", {})
     headers.update(_get_headers(subprotocols))
 
@@ -1216,14 +1224,15 @@ async def _aconnect_ws(
         if response.status_code != 101:
             raise WebSocketUpgradeError(response)
 
-        async with AsyncWebSocketSession(
+        session = session_class(
             response.extensions["network_stream"],
             max_message_size_bytes=max_message_size_bytes,
             queue_size=queue_size,
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
             response=response,
-        ) as session:
+        )
+        async with session:
             yield session
 
 
@@ -1241,8 +1250,9 @@ async def aconnect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
+    session_class: type[AsyncSession] = AsyncWebSocketSession,
     **kwargs: typing.Any,
-) -> typing.AsyncGenerator[AsyncWebSocketSession, None]:
+) -> typing.AsyncGenerator[AsyncSession, None]:
     """
     Start an async WebSocket session.
 
@@ -1309,6 +1319,7 @@ async def aconnect_ws(
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
                 keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
                 subprotocols=subprotocols,
+                session_class=session_class,
                 **kwargs,
             ) as websocket:
                 yield websocket
@@ -1321,6 +1332,7 @@ async def aconnect_ws(
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
             subprotocols=subprotocols,
+            session_class=session_class,
             **kwargs,
         ) as websocket:
             yield websocket
