@@ -44,10 +44,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         self,
     ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
         self.exit_stack = contextlib.AsyncExitStack()
-        self._task_group = await self.exit_stack.enter_async_context(
+        task_group = await self.exit_stack.enter_async_context(
             anyio.create_task_group()
         )
-        self._task_group.start_soon(self._run)
+        task_group.start_soon(self._run)
 
         await self.send({"type": "websocket.connect"})
         message = await self.receive()
