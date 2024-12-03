@@ -82,6 +82,7 @@ class WebSocketSession:
 
         self._ping_manager = PingManager()
         self._should_close = threading.Event()
+        self._write_lock: threading.Lock = threading.Lock()
         self._should_close_task: typing.Optional[concurrent.futures.Future[bool]] = None
         self._executor: typing.Optional[concurrent.futures.ThreadPoolExecutor] = None
 
@@ -175,7 +176,8 @@ class WebSocketSession:
         """
         try:
             data = self.connection.send(event)
-            self.stream.write(data)
+            with self._write_lock:
+                self.stream.write(data)
         except httpcore.WriteError as e:
             self.close(CloseReason.INTERNAL_ERROR, "Stream write error")
             raise WebSocketNetworkError() from e
@@ -448,7 +450,8 @@ class WebSocketSession:
             event = wsproto.events.CloseConnection(code, reason)
             data = self.connection.send(event)
             try:
-                self.stream.write(data)
+                with self._write_lock:
+                    self.stream.write(data)
             except httpcore.WriteError:
                 pass
         self.stream.close()
@@ -475,7 +478,8 @@ class WebSocketSession:
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
                         data = self.connection.send(event.response())
-                        self.stream.write(data)
+                        with self._write_lock:
+                            self.stream.write(data)
                         continue
                     if isinstance(event, wsproto.events.Pong):
                         self._ping_manager.ack(event.payload)
@@ -593,6 +597,7 @@ class AsyncWebSocketSession:
 
         self._ping_manager = AsyncPingManager()
         self._should_close = anyio.Event()
+        self._write_lock = anyio.Lock()
 
         self._max_message_size_bytes = max_message_size_bytes
         self._queue_size = queue_size
@@ -689,7 +694,8 @@ class AsyncWebSocketSession:
         """
         try:
             data = self.connection.send(event)
-            await self.stream.write(data)
+            async with self._write_lock:
+                await self.stream.write(data)
         except httpcore.WriteError as e:
             await self.close(CloseReason.INTERNAL_ERROR, "Stream write error")
             raise WebSocketNetworkError() from e
@@ -963,7 +969,8 @@ class AsyncWebSocketSession:
             event = wsproto.events.CloseConnection(code, reason)
             data = self.connection.send(event)
             try:
-                await self.stream.write(data)
+                async with self._write_lock:
+                    await self.stream.write(data)
             except httpcore.WriteError:
                 pass
         await self.stream.aclose()
@@ -990,7 +997,8 @@ class AsyncWebSocketSession:
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
                         data = self.connection.send(event.response())
-                        await self.stream.write(data)
+                        async with self._write_lock:
+                            await self.stream.write(data)
                         continue
                     if isinstance(event, wsproto.events.Pong):
                         self._ping_manager.ack(event.payload)
