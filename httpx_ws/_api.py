@@ -1076,7 +1076,7 @@ def _connect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[SyncSession] = WebSocketSession,
+    session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
     headers = kwargs.pop("headers", {})
@@ -1112,7 +1112,7 @@ def connect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[SyncSession] = WebSocketSession,
+    session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
     """
@@ -1149,7 +1149,7 @@ def connect_ws(
             Optional list of suprotocols to negotiate with the server.
         session_class:
             The session class to use.
-            Defaults to [WebSocketSession][httpx_ws.WebSocket
+            Defaults to [WebSocketSession][httpx_ws.WebSocketSession].
         **kwargs:
             Additional keyword arguments that will be passed to
             the [HTTPX stream()](https://www.python-httpx.org/api/#request) method.
@@ -1217,7 +1217,7 @@ async def _aconnect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[AsyncSession] = AsyncWebSocketSession,
+    session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
     headers = kwargs.pop("headers", {})
@@ -1253,7 +1253,7 @@ async def aconnect_ws(
         float
     ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[AsyncSession] = AsyncWebSocketSession,
+    session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
     """
