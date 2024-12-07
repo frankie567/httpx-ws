@@ -130,6 +130,15 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "GreyElaina",
+      "name": "Elaina",
+      "avatar_url": "https://avatars.githubusercontent.com/u/31543961?v=4",
+      "profile": "https://tinymind.me/GreyElaina",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
