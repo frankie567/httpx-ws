@@ -1147,6 +1147,9 @@ def connect_ws(
             Defaults to 20 seconds.
         subprotocols:
             Optional list of suprotocols to negotiate with the server.
+        session_class:
+            The session class to use.
+            Defaults to [WebSocketSession][httpx_ws.WebSocket
         **kwargs:
             Additional keyword arguments that will be passed to
             the [HTTPX stream()](https://www.python-httpx.org/api/#request) method.
@@ -1285,6 +1288,9 @@ async def aconnect_ws(
             Defaults to 20 seconds.
         subprotocols:
             Optional list of suprotocols to negotiate with the server.
+        session_class:
+            The session class to use.
+            Defaults to [AsyncWebSocketSession][httpx_ws.AsyncWebSocketSession].
         **kwargs:
             Additional keyword arguments that will be passed to
             the [HTTPX stream()](https://www.python-httpx.org/api/#request) method.
