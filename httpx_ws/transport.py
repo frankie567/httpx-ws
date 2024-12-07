@@ -1,7 +1,6 @@
 import contextlib
 import queue
 import typing
-from concurrent.futures import Future
 
 import anyio
 import wsproto
@@ -44,11 +43,11 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def __aenter__(
         self,
     ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
-        self.exit_stack = contextlib.ExitStack()
-        self.portal = self.exit_stack.enter_context(
-            anyio.from_thread.start_blocking_portal("asyncio")
+        self.exit_stack = contextlib.AsyncExitStack()
+        task_group = await self.exit_stack.enter_async_context(
+            anyio.create_task_group()
         )
-        _: Future[None] = self.portal.start_task_soon(self._run)
+        task_group.start_soon(self._run)
 
         await self.send({"type": "websocket.connect"})
         message = await self.receive()
@@ -60,8 +59,9 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         assert message["type"] == "websocket.accept"
         return self, self._build_accept_response(message)
 
-    async def __aexit__(self, *args: typing.Any) -> None:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.aclose()
+        await self.exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def read(
         self, max_bytes: int, timeout: typing.Optional[float] = None
@@ -109,7 +109,6 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
     async def aclose(self) -> None:
         await self.send({"type": "websocket.close"})
-        self.exit_stack.close()
 
     async def send(self, message: Message) -> None:
         self._receive_queue.put(message)
