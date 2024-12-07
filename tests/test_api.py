@@ -1,3 +1,4 @@
+import concurrent.futures
 import contextlib
 import queue
 import threading
@@ -934,3 +935,36 @@ async def test_threads_wont_hang(server_factory: ServerFactoryFixture) -> None:
             time.sleep(0.1)
             final_threads_count = threading.active_count()
             assert initial_threads_count == final_threads_count
+
+
+@pytest.mark.anyio
+async def test_concurrency_write(server_factory: ServerFactoryFixture) -> None:
+    """
+    Check that there is no error because of two tasks trying to write the stream at the
+    same time. Typically, this is when a background ping tries to send a ping while the
+    main task is sending a message.
+
+    See: https://github.com/frankie567/httpx-ws/issues/29
+    """
+
+    async def websocket_endpoint(websocket: WebSocket):
+        await websocket.accept()
+        while True:
+            message = await websocket.receive_text()
+            await websocket.send_text(message)
+
+    with server_factory(websocket_endpoint) as socket:
+        # Added for completeness, but were not able to reproduce the issue with the sync client
+        with httpx.Client(transport=httpx.HTTPTransport(uds=socket)) as client:
+            with connect_ws("http://socket/ws", client) as ws:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                    for _ in range(10):
+                        executor.submit(ws.send_text, "CLIENT_MESSAGE")
+
+        async with httpx.AsyncClient(
+            transport=httpx.AsyncHTTPTransport(uds=socket)
+        ) as aclient:
+            async with aconnect_ws("http://socket/ws", aclient) as aws:
+                async with anyio.create_task_group() as tg:
+                    for _ in range(10):
+                        tg.start_soon(aws.send_text, "CLIENT_MESSAGE")
