@@ -130,6 +130,15 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "go",
+      "name": "Go Chiba",
+      "avatar_url": "https://avatars.githubusercontent.com/u/137203?v=4",
+      "profile": "https://github.com/go",
+      "contributions": [
+        "test"
+      ]
     }
   ],
   "contributorsPerLine": 7,
