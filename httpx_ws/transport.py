@@ -43,11 +43,8 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def __aenter__(
         self,
     ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
-        self.exit_stack = contextlib.AsyncExitStack()
-        task_group = await self.exit_stack.enter_async_context(
-            anyio.create_task_group()
-        )
-        task_group.start_soon(self._run)
+        self._task_group = await anyio.create_task_group().__aenter__()
+        self._task_group.start_soon(self._run)
 
         await self.send({"type": "websocket.connect"})
         message = await self.receive()
@@ -61,7 +58,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.aclose()
-        await self.exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+        await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
 
     async def read(
         self, max_bytes: int, timeout: typing.Optional[float] = None
