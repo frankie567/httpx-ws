@@ -39,10 +39,17 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         self._send_queue: queue.Queue[Message] = queue.Queue()
         self.connection = wsproto.WSConnection(wsproto.ConnectionType.SERVER)
         self.connection.initiate_upgrade_connection(scope["headers"], scope["path"])
+        self._exit_stack = contextlib.AsyncExitStack()
+        self._aentered = False
 
     async def __aenter__(
         self,
     ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
+        if self._aentered:
+            raise RuntimeError(
+                "Cannot use ASGIWebSocketAsyncNetworkStream in a context manager twice"
+            )
+        self._aentered = True
         async with contextlib.AsyncExitStack() as stack:
             self._task_group = await stack.enter_async_context(anyio.create_task_group())
             self._task_group.start_soon(self._run)
