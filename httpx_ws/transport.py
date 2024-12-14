@@ -43,22 +43,25 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def __aenter__(
         self,
     ) -> tuple["ASGIWebSocketAsyncNetworkStream", bytes]:
-        self._task_group = await anyio.create_task_group().__aenter__()
-        self._task_group.start_soon(self._run)
+        async with contextlib.AsyncExitStack() as stack:
+            self._task_group = await stack.enter_async_context(anyio.create_task_group())
+            self._task_group.start_soon(self._run)
 
-        await self.send({"type": "websocket.connect"})
-        message = await self.receive()
+            await self.send({"type": "websocket.connect"})
+            message = await self.receive()
 
-        if message["type"] == "websocket.close":
-            await self.aclose()
-            raise WebSocketDisconnect(message["code"], message.get("reason"))
+            stack.push_async_callback(self.aclose)
 
-        assert message["type"] == "websocket.accept"
-        return self, self._build_accept_response(message)
+            if message["type"] == "websocket.close":
+                raise WebSocketDisconnect(message["code"], message.get("reason"))
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.aclose()
-        await self._task_group.__aexit__(exc_type, exc_val, exc_tb)
+            assert message["type"] == "websocket.accept"
+            retval = self, self._build_accept_response(message)
+            self._exit_stack = stack.pop_all()
+        return retval
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool | None:
+        return await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def read(
         self, max_bytes: int, timeout: typing.Optional[float] = None
