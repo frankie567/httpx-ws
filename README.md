@@ -10,15 +10,6 @@
 [![PyPI version](https://badge.fury.io/py/httpx-ws.svg)](https://badge.fury.io/py/httpx-ws)
 [![Downloads](https://pepy.tech/badge/httpx-ws)](https://pepy.tech/project/httpx-ws)
 
-<p align="center">
-<a href="https://polar.sh/frankie567">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://polar.sh/embed/subscribe.svg?org=frankie567&darkmode=1">
-  <img alt="Subscribe" src="https://polar.sh/embed/subscribe.svg?org=frankie567">
-</picture>
-</a>
-</p>
-
 ---
 
 **Documentation**: <a href="https://frankie567.github.io/httpx-ws/" target="_blank">https://frankie567.github.io/httpx-ws/</a>
@@ -35,13 +26,13 @@ pip install httpx-ws
 
 ## Features
 
-* [X] Sync and async client
-* [X] Helper methods to send text, binary and JSON data
-* [X] Helper methods to receive text, binary and JSON data
-* [X] Automatic ping/pong answers
-* [X] HTTPX transport to test WebSockets defined in ASGI apps
-* [X] Automatic keepalive ping
-* [X] `asyncio` and [Trio](https://trio.readthedocs.io/) support through [AnyIO](https://anyio.readthedocs.io/)
+- [x] Sync and async client
+- [x] Helper methods to send text, binary and JSON data
+- [x] Helper methods to receive text, binary and JSON data
+- [x] Automatic ping/pong answers
+- [x] HTTPX transport to test WebSockets defined in ASGI apps
+- [x] Automatic keepalive ping
+- [x] `asyncio` and [Trio](https://trio.readthedocs.io/) support through [AnyIO](https://anyio.readthedocs.io/)
 
 ## Contributors ✨
 
