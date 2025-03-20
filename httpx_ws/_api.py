@@ -476,6 +476,8 @@ class WebSocketSession:
         try:
             while not self._should_close.is_set():
                 data = self._wait_until_closed(self.stream.read, max_bytes)
+                if data == b"":
+                    data = None
                 self.connection.receive_data(data)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -995,6 +997,8 @@ class AsyncWebSocketSession:
         try:
             while not self._should_close.is_set():
                 data = await self.stream.read(max_bytes=max_bytes)
+                if data == b"":
+                    data = None
                 self.connection.receive_data(data)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
