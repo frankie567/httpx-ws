@@ -275,6 +275,31 @@ class TestReceive:
             with WebSocketSession(stream) as websocket_session:
                 websocket_session.receive()
 
+    def test_receive_closed_socket(self):
+        class MockNetworkStream(NetworkStream):
+            def __init__(self) -> None:
+                self.connection = wsproto.connection.Connection(
+                    wsproto.connection.ConnectionType.SERVER
+                )
+
+            def read(
+                self, max_bytes: int, timeout: typing.Optional[float] = None
+            ) -> bytes:
+                return b""
+
+            def write(
+                self, buffer: bytes, timeout: typing.Optional[float] = None
+            ) -> None:
+                pass
+
+            def close(self) -> None:
+                pass
+
+        stream = MockNetworkStream()
+        with pytest.raises(WebSocketNetworkError):
+            with WebSocketSession(stream) as websocket_session:
+                websocket_session.receive()
+
     async def test_async_receive_error(self):
         class AsyncMockNetworkStream(AsyncNetworkStream):
             def __init__(self) -> None:
@@ -286,6 +311,31 @@ class TestReceive:
                 self, max_bytes: int, timeout: typing.Optional[float] = None
             ) -> bytes:
                 raise httpcore.ReadError()
+
+            async def write(
+                self, buffer: bytes, timeout: typing.Optional[float] = None
+            ) -> None:
+                pass
+
+            async def aclose(self) -> None:
+                pass
+
+        stream = AsyncMockNetworkStream()
+        with pytest.raises(WebSocketNetworkError):
+            async with AsyncWebSocketSession(stream) as websocket_session:
+                await websocket_session.receive()
+
+    async def test_async_receive_closed_socket(self):
+        class AsyncMockNetworkStream(AsyncNetworkStream):
+            def __init__(self) -> None:
+                self.connection = wsproto.connection.Connection(
+                    wsproto.connection.ConnectionType.SERVER
+                )
+
+            async def read(
+                self, max_bytes: int, timeout: typing.Optional[float] = None
+            ) -> bytes:
+                return b""
 
             async def write(
                 self, buffer: bytes, timeout: typing.Optional[float] = None

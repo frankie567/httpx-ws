@@ -42,6 +42,10 @@ class ShouldClose(Exception):
     pass
 
 
+class EndOfStream(Exception):
+    pass
+
+
 class WebSocketSession:
     """
     Sync context manager representing an opened WebSocket session.
@@ -475,7 +479,7 @@ class WebSocketSession:
         partial_message_buffer: typing.Union[str, bytes, None] = None
         try:
             while not self._should_close.is_set():
-                data = self._wait_until_closed(self.stream.read, max_bytes)
+                data = self._wait_until_closed(self._read_stream, max_bytes)
                 self.connection.receive_data(data)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -508,7 +512,7 @@ class WebSocketSession:
                             self._events.put(full_message_event)
                         continue
                     self._events.put(event)
-        except (httpcore.ReadError, httpcore.WriteError):
+        except (httpcore.ReadError, httpcore.WriteError, EndOfStream):
             self.close(CloseReason.INTERNAL_ERROR, "Stream error")
             self._events.put(WebSocketNetworkError())
         except ShouldClose:
@@ -553,6 +557,12 @@ class WebSocketSession:
             assert todo_task in done
             result = todo_task.result()
         return result
+
+    def _read_stream(self, max_bytes: int) -> bytes:
+        data = self.stream.read(max_bytes)
+        if data == b"":
+            raise EndOfStream()
+        return data
 
 
 class AsyncWebSocketSession:
@@ -994,7 +1004,7 @@ class AsyncWebSocketSession:
         partial_message_buffer: typing.Union[str, bytes, None] = None
         try:
             while not self._should_close.is_set():
-                data = await self.stream.read(max_bytes=max_bytes)
+                data = await self._read_stream(max_bytes)
                 self.connection.receive_data(data)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -1027,7 +1037,7 @@ class AsyncWebSocketSession:
                             await self._send_event.send(full_message_event)
                         continue
                     await self._send_event.send(event)
-        except (httpcore.ReadError, httpcore.WriteError):
+        except (httpcore.ReadError, httpcore.WriteError, EndOfStream):
             await self.close(CloseReason.INTERNAL_ERROR, "Stream error")
             await self._send_event.send(WebSocketNetworkError())
 
@@ -1046,6 +1056,12 @@ class AsyncWebSocketSession:
                         CloseReason.INTERNAL_ERROR, "Keepalive ping timeout"
                     )
                     await self._send_event.send(WebSocketNetworkError())
+
+    async def _read_stream(self, max_bytes: int) -> bytes:
+        data = await self.stream.read(max_bytes)
+        if data == b"":
+            raise EndOfStream()
+        return data
 
 
 def _get_headers(
