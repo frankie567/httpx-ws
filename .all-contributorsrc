@@ -139,6 +139,16 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "runsisi",
+      "name": "runsisi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2339258?v=4",
+      "profile": "https://runsisi.com",
+      "contributions": [
+        "bug",
+        "research"
+      ]
     }
   ],
   "contributorsPerLine": 7,
