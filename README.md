@@ -61,6 +61,9 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/ro-oliveira95"><img src="https://avatars.githubusercontent.com/u/27009864?v=4?s=100" width="100px;" alt="Rodrigo de Oliveira Neto"/><br /><sub><b>Rodrigo de Oliveira Neto</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3Aro-oliveira95" title="Bug reports">🐛</a> <a href="https://github.com/frankie567/httpx-ws/commits?author=ro-oliveira95" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://tinymind.me/GreyElaina"><img src="https://avatars.githubusercontent.com/u/31543961?v=4?s=100" width="100px;" alt="Elaina"/><br /><sub><b>Elaina</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/commits?author=GreyElaina" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://runsisi.com"><img src="https://avatars.githubusercontent.com/u/2339258?v=4?s=100" width="100px;" alt="runsisi"/><br /><sub><b>runsisi</b></sub></a><br /><a href="https://github.com/frankie567/httpx-ws/issues?q=author%3Arunsisi" title="Bug reports">🐛</a> <a href="#research-runsisi" title="Research">🔬</a></td>
+    </tr>
   </tbody>
 </table>
 
