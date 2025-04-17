@@ -66,6 +66,7 @@ nav:
     - About: index.md
     - Usage:
           - Quickstart: usage/quickstart.md
+          - Client: usage/client.md
           - Subprotocols: usage/subprotocols.md
           - Testing ASGI: usage/asgi.md
     - Reference:

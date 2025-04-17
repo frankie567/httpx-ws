@@ -1,8 +1,10 @@
 __version__ = "0.7.2"
 
 from ._api import (
+    AsyncWebSocketClient,
     AsyncWebSocketSession,
     JSONMode,
+    WebSocketClient,
     WebSocketSession,
     aconnect_ws,
     connect_ws,
@@ -16,9 +18,11 @@ from ._exceptions import (
 )
 
 __all__ = [
+    "AsyncWebSocketClient",
     "AsyncWebSocketSession",
     "HTTPXWSException",
     "JSONMode",
+    "WebSocketClient",
     "WebSocketDisconnect",
     "WebSocketInvalidTypeReceived",
     "WebSocketNetworkError",
