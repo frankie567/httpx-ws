@@ -1078,40 +1078,114 @@ def _get_headers(
     return headers
 
 
-@contextlib.contextmanager
-def _connect_ws(
-    url: str,
-    client: httpx.Client,
-    *,
-    max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
-    queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
-    **kwargs: typing.Any,
-) -> typing.Generator[SyncSession, None, None]:
-    headers = kwargs.pop("headers", {})
-    headers.update(_get_headers(subprotocols))
+class WebSocketClient(typing.Generic[SyncSession]):
+    """
+    An sync WebSocket client.
 
-    with client.stream("GET", url, headers=headers, **kwargs) as response:
-        if response.status_code != 101:
-            raise WebSocketUpgradeError(response)
+    This class provides an API for connecting to WebSocket.
 
-        session = session_class(
-            response.extensions["network_stream"],
-            max_message_size_bytes=max_message_size_bytes,
-            queue_size=queue_size,
-            keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
-            keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-            response=response,
-        )
-        with session:
-            yield session
+    Attributes:
+        client:
+            HTTPX client to use.
+            If not provided, a default one will be initialized.
+        max_message_size_bytes:
+            Message size in bytes to receive from the server.
+            Defaults to 65 KiB.
+        queue_size:
+            Size of the queue where the received messages will be held
+            until they are consumed.
+            If the queue is full, the client will stop receive messages
+            from the server until the queue has room available.
+            Defaults to 512.
+        keepalive_ping_interval_seconds:
+            Interval at which the client will automatically send a Ping event
+            to keep the connection alive. Set it to `None` to disable this mechanism.
+            Defaults to 20 seconds.
+        keepalive_ping_timeout_seconds:
+            Maximum delay the client will wait for an answer to its Ping event.
+            If the delay is exceeded,
+            [WebSocketNetworkError][httpx_ws.WebSocketNetworkError]
+            will be raised and the connection closed.
+            Defaults to 20 seconds.
+        session_class:
+            The session class to use.
+            Defaults to [WebSocketSession][httpx_ws.WebSocketSession].
+    """
+
+    def __init__(
+        self,
+        client: httpx.Client,
+        *,
+        max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
+        queue_size: int = DEFAULT_QUEUE_SIZE,
+        keepalive_ping_interval_seconds: typing.Optional[
+            float
+        ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+        keepalive_ping_timeout_seconds: typing.Optional[
+            float
+        ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+        session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
+    ) -> None:
+        self.client = client
+        self.max_message_size_bytes = max_message_size_bytes
+        self.queue_size = queue_size
+        self.keepalive_ping_interval_seconds = keepalive_ping_interval_seconds
+        self.keepalive_ping_timeout_seconds = keepalive_ping_timeout_seconds
+        self.session_class = session_class
+
+    @contextlib.contextmanager
+    def connect(
+        self,
+        url: str,
+        subprotocols: typing.Optional[list[str]] = None,
+        **kwargs: typing.Any,
+    ) -> typing.Generator[SyncSession, None, None]:
+        """
+        Start a sync WebSocket session.
+
+        It returns a context manager that'll automatically
+        call [close()][httpx_ws.WebSocketSession.close] when exiting.
+
+        Args:
+            url: The WebSocket URL.
+            subprotocols:
+                Optional list of subprotocols to negotiate with the server.
+            **kwargs:
+                Additional keyword arguments that will be passed to
+                the [HTTPX stream()](https://www.python-httpx.org/api/#request) method.
+
+        Returns:
+            A [context manager][contextlib.AbstractContextManager]
+                for [WebSocketSession][httpx_ws.WebSocketSession].
+
+        Examples:
+            Initialize the client and connect to a WebSocket.
+
+                with httpx.Client() as client:
+                    ws_client = WebSocketClient(client)
+                    with ws_client.connect("http://localhost:8000/ws") as ws:
+                        message = ws.receive_text()
+                        print(message)
+                        ws.send_text("Hello!")
+        """
+
+        headers = kwargs.pop("headers", {})
+        headers.update(_get_headers(subprotocols))
+
+        with self.client.stream("GET", url, headers=headers, **kwargs) as response:
+            if response.status_code != 101:
+                raise WebSocketUpgradeError(response)
+
+            session = self.session_class(
+                response.extensions["network_stream"],
+                max_message_size_bytes=self.max_message_size_bytes,
+                queue_size=self.queue_size,
+                keepalive_ping_interval_seconds=self.keepalive_ping_interval_seconds,
+                keepalive_ping_timeout_seconds=self.keepalive_ping_timeout_seconds,
+                response=response,
+            )
+            with session:
+                yield session
 
 
 @contextlib.contextmanager
@@ -1162,7 +1236,7 @@ def connect_ws(
             will be raised and the connection closed.
             Defaults to 20 seconds.
         subprotocols:
-            Optional list of suprotocols to negotiate with the server.
+            Optional list of subprotocols to negotiate with the server.
         session_class:
             The session class to use.
             Defaults to [WebSocketSession][httpx_ws.WebSocketSession].
@@ -1192,67 +1266,140 @@ def connect_ws(
     """
     if client is None:
         with httpx.Client() as client:
-            with _connect_ws(
-                url,
+            ws_client = WebSocketClient(
                 client=client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
                 keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-                subprotocols=subprotocols,
                 session_class=session_class,
-                **kwargs,
+            )
+            with ws_client.connect(
+                url, subprotocols=subprotocols, **kwargs
             ) as websocket:
                 yield websocket
     else:
-        with _connect_ws(
-            url,
+        ws_client = WebSocketClient(
             client=client,
             max_message_size_bytes=max_message_size_bytes,
             queue_size=queue_size,
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-            subprotocols=subprotocols,
             session_class=session_class,
-            **kwargs,
-        ) as websocket:
+        )
+        with ws_client.connect(url, subprotocols=subprotocols, **kwargs) as websocket:
             yield websocket
 
 
-@contextlib.asynccontextmanager
-async def _aconnect_ws(
-    url: str,
-    client: httpx.AsyncClient,
-    *,
-    max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
-    queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
-    session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
-    **kwargs: typing.Any,
-) -> typing.AsyncGenerator[AsyncSession, None]:
-    headers = kwargs.pop("headers", {})
-    headers.update(_get_headers(subprotocols))
+class AsyncWebSocketClient(typing.Generic[AsyncSession]):
+    """
+    An async WebSocket client.
 
-    async with client.stream("GET", url, headers=headers, **kwargs) as response:
-        if response.status_code != 101:
-            raise WebSocketUpgradeError(response)
+    This class provides an API for connecting to WebSocket.
 
-        session = session_class(
-            response.extensions["network_stream"],
-            max_message_size_bytes=max_message_size_bytes,
-            queue_size=queue_size,
-            keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
-            keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-            response=response,
-        )
-        async with session:
-            yield session
+    Attributes:
+        client:
+            HTTPX client to use.
+            If not provided, a default one will be initialized.
+        max_message_size_bytes:
+            Message size in bytes to receive from the server.
+            Defaults to 65 KiB.
+        queue_size:
+            Size of the queue where the received messages will be held
+            until they are consumed.
+            If the queue is full, the client will stop receive messages
+            from the server until the queue has room available.
+            Defaults to 512.
+        keepalive_ping_interval_seconds:
+            Interval at which the client will automatically send a Ping event
+            to keep the connection alive. Set it to `None` to disable this mechanism.
+            Defaults to 20 seconds.
+        keepalive_ping_timeout_seconds:
+            Maximum delay the client will wait for an answer to its Ping event.
+            If the delay is exceeded,
+            [WebSocketNetworkError][httpx_ws.WebSocketNetworkError]
+            will be raised and the connection closed.
+            Defaults to 20 seconds.
+        session_class:
+            The session class to use.
+            Defaults to [AsyncWebSocketSession][httpx_ws.AsyncWebSocketSession].
+    """
+
+    def __init__(
+        self,
+        client: httpx.AsyncClient,
+        *,
+        max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
+        queue_size: int = DEFAULT_QUEUE_SIZE,
+        keepalive_ping_interval_seconds: typing.Optional[
+            float
+        ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+        keepalive_ping_timeout_seconds: typing.Optional[
+            float
+        ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+        session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
+    ) -> None:
+        self.client = client
+        self.max_message_size_bytes = max_message_size_bytes
+        self.queue_size = queue_size
+        self.keepalive_ping_interval_seconds = keepalive_ping_interval_seconds
+        self.keepalive_ping_timeout_seconds = keepalive_ping_timeout_seconds
+        self.session_class = session_class
+
+    @contextlib.asynccontextmanager
+    async def connect(
+        self,
+        url: str,
+        subprotocols: typing.Optional[list[str]] = None,
+        **kwargs: typing.Any,
+    ) -> typing.AsyncGenerator[AsyncSession, None]:
+        """
+        Start an async WebSocket session.
+
+        It returns an async context manager that'll automatically
+        call [close()][httpx_ws.AsyncWebSocketSession.close] when exiting.
+
+        Args:
+            url: The WebSocket URL.
+            subprotocols:
+                Optional list of subprotocols to negotiate with the server.
+            **kwargs:
+                Additional keyword arguments that will be passed to
+                the [HTTPX stream()](https://www.python-httpx.org/api/#request) method.
+
+        Returns:
+            An [async context manager][contextlib.AbstractAsyncContextManager]
+                for [AsyncWebSocketSession][httpx_ws.AsyncWebSocketSession].
+
+        Examples:
+            Initialize the client and connect to a WebSocket.
+
+                async with httpx.AsyncClient() as client:
+                    ws_client = AsyncWebSocketClient(client)
+                    async with ws_client.connect("http://localhost:8000/ws") as ws:
+                        message = await ws.receive_text()
+                        print(message)
+                        await ws.send_text("Hello!")
+        """
+        headers = kwargs.pop("headers", {})
+        headers.update(_get_headers(subprotocols))
+
+        async with self.client.stream(
+            "GET", url, headers=headers, **kwargs
+        ) as response:
+            if response.status_code != 101:
+                raise WebSocketUpgradeError(response)
+
+            session = self.session_class(
+                response.extensions["network_stream"],
+                max_message_size_bytes=self.max_message_size_bytes,
+                queue_size=self.queue_size,
+                keepalive_ping_interval_seconds=self.keepalive_ping_interval_seconds,
+                keepalive_ping_timeout_seconds=self.keepalive_ping_timeout_seconds,
+                response=response,
+            )
+            async with session:
+                yield session
 
 
 @contextlib.asynccontextmanager
@@ -1303,7 +1450,7 @@ async def aconnect_ws(
             will be raised and the connection closed.
             Defaults to 20 seconds.
         subprotocols:
-            Optional list of suprotocols to negotiate with the server.
+            Optional list of subprotocols to negotiate with the server.
         session_class:
             The session class to use.
             Defaults to [AsyncWebSocketSession][httpx_ws.AsyncWebSocketSession].
@@ -1333,28 +1480,28 @@ async def aconnect_ws(
     """
     if client is None:
         async with httpx.AsyncClient() as client:
-            async with _aconnect_ws(
-                url,
+            ws_client = AsyncWebSocketClient(
                 client=client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
                 keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-                subprotocols=subprotocols,
                 session_class=session_class,
-                **kwargs,
+            )
+            async with ws_client.connect(
+                url, subprotocols=subprotocols, **kwargs
             ) as websocket:
                 yield websocket
     else:
-        async with _aconnect_ws(
-            url,
+        ws_client = AsyncWebSocketClient(
             client=client,
             max_message_size_bytes=max_message_size_bytes,
             queue_size=queue_size,
             keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
             keepalive_ping_timeout_seconds=keepalive_ping_timeout_seconds,
-            subprotocols=subprotocols,
             session_class=session_class,
-            **kwargs,
+        )
+        async with ws_client.connect(
+            url, subprotocols=subprotocols, **kwargs
         ) as websocket:
             yield websocket

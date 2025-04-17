@@ -1,5 +1,4 @@
 import concurrent.futures
-import contextlib
 import queue
 import threading
 import time
@@ -16,8 +15,10 @@ from starlette.websockets import WebSocket
 from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDisconnect
 
 from httpx_ws import (
+    AsyncWebSocketClient,
     AsyncWebSocketSession,
     JSONMode,
+    WebSocketClient,
     WebSocketDisconnect,
     WebSocketInvalidTypeReceived,
     WebSocketNetworkError,
@@ -881,25 +882,19 @@ async def test_receive_close(server_factory: ServerFactoryFixture):
 
 @pytest.mark.anyio
 async def test_default_httpx_client():
-    mock_context = contextlib.ExitStack()
-    with patch(
-        "httpx_ws._api._connect_ws", return_value=mock_context
-    ) as mock_connect_ws:
+    with patch("httpx_ws._api.WebSocketClient") as mock_client:
         with connect_ws("http://socket/ws"):
             pass
-    mock_connect_ws.assert_called_once()
-    httpx_client = mock_connect_ws.call_args[1]["client"]
+    mock_client.return_value.connect.assert_called_once()
+    httpx_client = mock_client.call_args[1]["client"]
     assert isinstance(httpx_client, httpx.Client)
     assert httpx_client.is_closed
 
-    mock_async_context = contextlib.AsyncExitStack()
-    with patch(
-        "httpx_ws._api._aconnect_ws", return_value=mock_async_context
-    ) as mock_aconnect_ws:
+    with patch("httpx_ws._api.AsyncWebSocketClient") as mock_async_client:
         async with aconnect_ws("http://socket/ws"):
             pass
-    mock_aconnect_ws.assert_called_once()
-    httpx_client = mock_aconnect_ws.call_args[1]["client"]
+    mock_async_client.return_value.connect.assert_called_once()
+    httpx_client = mock_async_client.call_args[1]["client"]
     assert isinstance(httpx_client, httpx.AsyncClient)
     assert httpx_client.is_closed
 
@@ -1018,3 +1013,30 @@ async def test_concurrency_write(server_factory: ServerFactoryFixture) -> None:
                 async with anyio.create_task_group() as tg:
                     for _ in range(10):
                         tg.start_soon(aws.send_text, "CLIENT_MESSAGE")
+
+
+@pytest.mark.anyio
+async def test_client() -> None:
+    def handler(request):
+        return httpx.Response(
+            101, extensions={"network_stream": MagicMock(spec=NetworkStream)}
+        )
+
+    def async_handler(request):
+        return httpx.Response(
+            101, extensions={"network_stream": MagicMock(spec=AsyncNetworkStream)}
+        )
+
+    with httpx.Client(
+        base_url="http://localhost:8000", transport=httpx.MockTransport(handler)
+    ) as client:
+        ws_client = WebSocketClient(client)
+        with ws_client.connect("http://socket/ws") as ws:
+            assert isinstance(ws.response, httpx.Response)
+
+    async with httpx.AsyncClient(
+        base_url="http://localhost:8000", transport=httpx.MockTransport(async_handler)
+    ) as client:
+        async_ws_client = AsyncWebSocketClient(client)
+        async with async_ws_client.connect("http://socket/ws") as aws:
+            assert isinstance(aws.response, httpx.Response)
