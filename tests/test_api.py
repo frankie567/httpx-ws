@@ -14,8 +14,10 @@ from starlette.websockets import WebSocket
 from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDisconnect
 
 from httpx_ws import (
+    AsyncWebSocketClient,
     AsyncWebSocketSession,
     JSONMode,
+    WebSocketClient,
     WebSocketDisconnect,
     WebSocketInvalidTypeReceived,
     WebSocketNetworkError,
@@ -962,3 +964,30 @@ async def test_concurrency_write(server_factory: ServerFactoryFixture) -> None:
                 async with anyio.create_task_group() as tg:
                     for _ in range(10):
                         tg.start_soon(aws.send_text, "CLIENT_MESSAGE")
+
+
+@pytest.mark.anyio
+async def test_client() -> None:
+    def handler(request):
+        return httpx.Response(
+            101, extensions={"network_stream": MagicMock(spec=NetworkStream)}
+        )
+
+    def async_handler(request):
+        return httpx.Response(
+            101, extensions={"network_stream": MagicMock(spec=AsyncNetworkStream)}
+        )
+
+    with httpx.Client(
+        base_url="http://localhost:8000", transport=httpx.MockTransport(handler)
+    ) as client:
+        ws_client = WebSocketClient(client)
+        with ws_client.connect("http://socket/ws") as ws:
+            assert isinstance(ws.response, httpx.Response)
+
+    async with httpx.AsyncClient(
+        base_url="http://localhost:8000", transport=httpx.MockTransport(async_handler)
+    ) as client:
+        async_ws_client = AsyncWebSocketClient(client)
+        async with async_ws_client.connect("http://socket/ws") as aws:
+            assert isinstance(aws.response, httpx.Response)
