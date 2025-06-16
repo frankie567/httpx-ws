@@ -61,7 +61,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
             stack.push_async_callback(self.aclose)
 
-            if message["type"] == "websocket.disconnect":
+            if message["type"] in {"websocket.close", "websocket.disconnect"}:
                 await stack.aclose()
                 raise WebSocketDisconnect(message["code"], message.get("reason"))
 
