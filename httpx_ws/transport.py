@@ -1,5 +1,5 @@
 import contextlib
-import queue
+import math
 import typing
 
 import anyio
@@ -35,8 +35,12 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     def __init__(self, app: ASGIApp, scope: Scope) -> None:
         self.app = app
         self.scope = scope
-        self._receive_queue: queue.Queue[Message] = queue.Queue()
-        self._send_queue: queue.Queue[Message] = queue.Queue()
+        self._receive_queue = anyio.streams.stapled.StapledObjectStream(
+            *anyio.create_memory_object_stream[Message](max_buffer_size=math.inf)
+        )
+        self._send_queue = anyio.streams.stapled.StapledObjectStream(
+            *anyio.create_memory_object_stream[Message](max_buffer_size=math.inf)
+        )
         self.connection = wsproto.WSConnection(wsproto.ConnectionType.SERVER)
         self.connection.initiate_upgrade_connection(scope["headers"], scope["path"])
         self._exit_stack = contextlib.AsyncExitStack()
@@ -121,12 +125,13 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         await self.send({"type": "websocket.close"})
 
     async def send(self, message: Message) -> None:
-        self._receive_queue.put(message)
+        await self._receive_queue.send(message)
 
     async def receive(self, timeout: typing.Optional[float] = None) -> Message:
-        while self._send_queue.empty():
-            await anyio.sleep(0)
-        return self._send_queue.get(timeout=timeout)
+        if timeout is None:
+            timeout = math.inf
+        with anyio.fail_after(timeout):
+            return await self._send_queue.receive()
 
     async def _run(self) -> None:
         """
@@ -146,12 +151,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             await self._asgi_send(message)
 
     async def _asgi_receive(self) -> Message:
-        while self._receive_queue.empty():
-            await anyio.sleep(0)
-        return self._receive_queue.get()
+        return await self._receive_queue.receive()
 
     async def _asgi_send(self, message: Message) -> None:
-        self._send_queue.put(message)
+        await self._send_queue.send(message)
 
     def _build_accept_response(self, message: Message) -> bytes:
         subprotocol = message.get("subprotocol", None)
