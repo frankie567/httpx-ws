@@ -29,7 +29,8 @@ dependencies = [
     "mkdocs-material",
     "mkdocstrings[python]",
     "trio",
-    "flaky"
+    "flaky",
+    "exceptiongroup; python_version<'3.11'",
 ]
 
 [tool.hatch.envs.default.scripts]
