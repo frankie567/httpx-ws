@@ -61,7 +61,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
             stack.push_async_callback(self.aclose)
 
-            if message["type"] in {"websocket.close", "websocket.disconnect"}:
+            if message["type"] == "websocket.disconnect":
                 await stack.aclose()
                 raise WebSocketDisconnect(message["code"], message.get("reason"))
 
@@ -77,7 +77,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         message: Message = await self.receive(timeout=timeout)
         type = message["type"]
 
-        if type not in {"websocket.send", "websocket.close", "websocket.disconnect"}:
+        if type not in {"websocket.send", "websocket.disconnect"}:
             raise UnhandledASGIMessageType(message)
 
         event: wsproto.events.Event
@@ -88,7 +88,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             data_bytes: bytes | None = message.get("bytes")
             if data_bytes is not None:
                 event = wsproto.events.BytesMessage(data_bytes)
-        elif type in ("websocket.disconnect", "websocket.close"):
+        elif type == "websocket.disconnect":
             event = wsproto.events.CloseConnection(message["code"], message["reason"])
 
         return self.connection.send(event)
@@ -101,7 +101,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             elif isinstance(event, wsproto.events.CloseConnection):
                 await self.send(
                     {
-                        "type": "websocket.disconnect",
+                        "type": "websocket.close",
                         "code": event.code,
                         "reason": event.reason,
                     }
