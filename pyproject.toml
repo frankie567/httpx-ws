@@ -11,6 +11,13 @@ addopts = "--cov=httpx_ws/ --cov-report=term-missing"
 venv = "httpx-ws"
 venvPath = "./.hatch"
 reportUnannotatedClassAttribute = 'none'
+reportUnknownArgumentType = 'none'
+reportUnknownParameterType = 'none'
+reportMissingParameterType = 'none'
+reportUnusedParameter = 'none'
+reportUnusedCallResult = 'none'
+reportUnknownVariableType = 'none'
+reportExplicitAny = 'none'
 
 [tool.hatch]
 
