@@ -7,6 +7,11 @@ extend-select = ["I", "UP"]
 [tool.pytest.ini_options]
 addopts = "--cov=httpx_ws/ --cov-report=term-missing"
 
+[tool.basedpyright]
+venv = "httpx-ws"
+venvPath = "./.hatch"
+reportUnannotatedClassAttribute = 'none'
+
 [tool.hatch]
 
 [tool.hatch.metadata]
