@@ -150,6 +150,15 @@
         "bug",
         "research"
       ]
+    },
+    {
+      "login": "lulingar",
+      "name": "Luis Linares",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4201057?v=4",
+      "profile": "https://github.com/lulingar",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
