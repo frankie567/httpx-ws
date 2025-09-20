@@ -56,7 +56,7 @@ class TestASGIWebSocketAsyncNetworkStream:
             await send({"type": "websocket.accept"})
             message = await receive()
             received_messages.append(message)
-            while message["type"] != "websocket.disconnect":
+            while message["type"] != "websocket.close":
                 message = await receive()
                 received_messages.append(message)
 
@@ -75,7 +75,7 @@ class TestASGIWebSocketAsyncNetworkStream:
             {"type": "websocket.connect"},
             {"type": "websocket.receive", "text": "CLIENT_MESSAGE"},
             {"type": "websocket.receive", "bytes": b"CLIENT_MESSAGE"},
-            {"type": "websocket.disconnect", "code": 1000, "reason": ""},
+            {"type": "websocket.close", "code": 1000, "reason": ""},
         ]
 
     async def test_write_unhandled_event(self, scope: Scope):
