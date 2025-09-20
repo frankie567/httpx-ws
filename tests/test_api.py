@@ -3,7 +3,6 @@ import contextlib
 import queue
 import threading
 import time
-import typing
 from unittest.mock import MagicMock, call, patch
 
 import anyio
@@ -59,16 +58,12 @@ class TestSend:
                 )
                 self._should_close = False
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     time.sleep(0.1)
                 raise httpcore.ReadError()
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 raise httpcore.WriteError()
 
             def close(self) -> None:
@@ -87,16 +82,12 @@ class TestSend:
                 )
                 self._should_close = False
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     await anyio.sleep(0.1)
                 raise httpcore.ReadError()
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 raise httpcore.WriteError()
 
             async def aclose(self) -> None:
@@ -257,14 +248,10 @@ class TestReceive:
                     wsproto.connection.ConnectionType.SERVER
                 )
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 raise httpcore.ReadError()
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             def close(self) -> None:
@@ -282,14 +269,10 @@ class TestReceive:
                     wsproto.connection.ConnectionType.SERVER
                 )
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 return b""
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             def close(self) -> None:
@@ -307,14 +290,10 @@ class TestReceive:
                     wsproto.connection.ConnectionType.SERVER
                 )
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 raise httpcore.ReadError()
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             async def aclose(self) -> None:
@@ -332,14 +311,10 @@ class TestReceive:
                     wsproto.connection.ConnectionType.SERVER
                 )
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 return b""
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             async def aclose(self) -> None:
@@ -388,7 +363,7 @@ class TestReceive:
     )
     async def test_receive_oversized_message(
         self,
-        full_message: typing.Union[str, bytes],
+        full_message: str | bytes,
         send_method: str,
         server_factory: ServerFactoryFixture,
     ):
@@ -577,18 +552,14 @@ class TestReceivePing:
                     wsproto.events.CloseConnection(1000),
                 ]
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 try:
                     event = self.events_to_send.pop(0)
                     return self.connection.send(event)
                 except IndexError:
                     raise httpcore.ReadError()
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 self.connection.receive_data(buffer)
 
             def close(self) -> None:
@@ -615,18 +586,14 @@ class TestReceivePing:
                     wsproto.events.CloseConnection(1000),
                 ]
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 try:
                     event = self.events_to_send.pop(0)
                     return self.connection.send(event)
                 except IndexError:
                     raise httpcore.ReadError()
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 self.connection.receive_data(buffer)
 
             async def aclose(self) -> None:
@@ -656,9 +623,7 @@ class TestKeepalivePing:
                 self.ping_answered = 0
                 self.events_to_send: queue.Queue[wsproto.events.Event] = queue.Queue()
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     try:
                         event = self.events_to_send.get_nowait()
@@ -668,9 +633,7 @@ class TestKeepalivePing:
                         pass
                 raise httpcore.ReadError()
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 self.connection.receive_data(buffer)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -699,16 +662,12 @@ class TestKeepalivePing:
                 )
                 self._should_close = False
 
-            def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     time.sleep(0.1)
                 raise httpcore.ReadError()
 
-            def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             def close(self) -> None:
@@ -738,9 +697,7 @@ class TestKeepalivePing:
                     self.receive_events,
                 ) = anyio.create_memory_object_stream[wsproto.events.Event]()
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     try:
                         event = self.receive_events.receive_nowait()
@@ -750,9 +707,7 @@ class TestKeepalivePing:
                         await anyio.sleep(0.1)
                 raise httpcore.ReadError()
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 self.connection.receive_data(buffer)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -781,16 +736,12 @@ class TestKeepalivePing:
                 )
                 self._should_close = False
 
-            async def read(
-                self, max_bytes: int, timeout: typing.Optional[float] = None
-            ) -> bytes:
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
                 while not self._should_close:
                     await anyio.sleep(0.1)
                 raise httpcore.ReadError()
 
-            async def write(
-                self, buffer: bytes, timeout: typing.Optional[float] = None
-            ) -> None:
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
                 pass
 
             async def aclose(self) -> None:

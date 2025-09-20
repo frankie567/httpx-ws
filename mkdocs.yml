@@ -12,8 +12,8 @@ theme:
         # Palette toggle for automatic mode
         - media: "(prefers-color-scheme)"
           toggle:
-            icon: material/brightness-auto
-            name: Switch to light mode
+              icon: material/brightness-auto
+              name: Switch to light mode
 
         # Palette toggle for light mode
         - media: "(prefers-color-scheme: light)"
@@ -54,7 +54,7 @@ plugins:
           handlers:
               python:
                   import:
-                      - https://docs.python.org/3.9/objects.inv
+                      - https://docs.python.org/3.10/objects.inv
                       - https://python-hyper.org/projects/wsproto/en/stable/objects.inv
                   options:
                       docstring_style: google
@@ -69,4 +69,4 @@ nav:
           - Subprotocols: usage/subprotocols.md
           - Testing ASGI: usage/asgi.md
     - Reference:
-        - httpx_ws: reference/httpx_ws.md
+          - httpx_ws: reference/httpx_ws.md

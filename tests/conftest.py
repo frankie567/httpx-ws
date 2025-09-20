@@ -2,7 +2,8 @@ import contextlib
 import pathlib
 import queue
 import tempfile
-from typing import Callable, Literal, Protocol
+from collections.abc import Callable
+from typing import Literal, Protocol
 from unittest.mock import MagicMock
 
 import pytest

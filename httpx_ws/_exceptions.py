@@ -1,5 +1,3 @@
-import typing
-
 import httpx
 import wsproto
 
@@ -32,7 +30,7 @@ class WebSocketDisconnect(HTTPXWSException):
             Additional reasoning for why the connection has closed.
     """
 
-    def __init__(self, code: int = 1000, reason: typing.Optional[str] = None) -> None:
+    def __init__(self, code: int = 1000, reason: str | None = None) -> None:
         self.code = code
         self.reason = reason or ""
 

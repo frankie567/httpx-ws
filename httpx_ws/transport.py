@@ -70,12 +70,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             self._exit_stack = stack.pop_all()
         return retval
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> typing.Union[bool, None]:
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool | None:
         return await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
-    async def read(
-        self, max_bytes: int, timeout: typing.Optional[float] = None
-    ) -> bytes:
+    async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         message: Message = await self.receive(timeout=timeout)
         type = message["type"]
 
@@ -84,10 +82,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
         event: wsproto.events.Event
         if type == "websocket.send":
-            data_str: typing.Optional[str] = message.get("text")
+            data_str: str | None = message.get("text")
             if data_str is not None:
                 event = wsproto.events.TextMessage(data_str)
-            data_bytes: typing.Optional[bytes] = message.get("bytes")
+            data_bytes: bytes | None = message.get("bytes")
             if data_bytes is not None:
                 event = wsproto.events.BytesMessage(data_bytes)
         elif type == "websocket.close":
@@ -95,9 +93,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
         return self.connection.send(event)
 
-    async def write(
-        self, buffer: bytes, timeout: typing.Optional[float] = None
-    ) -> None:
+    async def write(self, buffer: bytes, timeout: float | None = None) -> None:
         self.connection.receive_data(buffer)
         for event in self.connection.events():
             if isinstance(event, wsproto.events.Request):
@@ -123,7 +119,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def send(self, message: Message) -> None:
         self._receive_queue.put(message)
 
-    async def receive(self, timeout: typing.Optional[float] = None) -> Message:
+    async def receive(self, timeout: float | None = None) -> Message:
         while self._send_queue.empty():
             await anyio.sleep(0)
         return self._send_queue.get(timeout=timeout)
@@ -167,7 +163,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 class ASGIWebSocketTransport(ASGITransport):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.exit_stack: typing.Optional[contextlib.AsyncExitStack] = None
+        self.exit_stack: contextlib.AsyncExitStack | None = None
 
     async def handle_async_request(self, request: Request) -> Response:
         scheme = request.url.scheme

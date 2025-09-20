@@ -57,8 +57,8 @@ class WebSocketSession:
             The webSocket handshake response.
     """
 
-    subprotocol: typing.Optional[str]
-    response: typing.Optional[httpx.Response]
+    subprotocol: str | None
+    response: httpx.Response | None
 
     def __init__(
         self,
@@ -66,13 +66,11 @@ class WebSocketSession:
         *,
         max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
         queue_size: int = DEFAULT_QUEUE_SIZE,
-        keepalive_ping_interval_seconds: typing.Optional[
-            float
-        ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-        keepalive_ping_timeout_seconds: typing.Optional[
-            float
-        ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        response: typing.Optional[httpx.Response] = None,
+        keepalive_ping_interval_seconds: float
+        | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+        keepalive_ping_timeout_seconds: float
+        | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+        response: httpx.Response | None = None,
     ) -> None:
         self.stream = stream
         self.connection = wsproto.connection.Connection(wsproto.ConnectionType.CLIENT)
@@ -82,15 +80,15 @@ class WebSocketSession:
         else:
             self.subprotocol = None
 
-        self._events: queue.Queue[
-            typing.Union[wsproto.events.Event, HTTPXWSException]
-        ] = queue.Queue(queue_size)
+        self._events: queue.Queue[wsproto.events.Event | HTTPXWSException] = (
+            queue.Queue(queue_size)
+        )
 
         self._ping_manager = PingManager()
         self._should_close = threading.Event()
         self._write_lock: threading.Lock = threading.Lock()
-        self._should_close_task: typing.Optional[concurrent.futures.Future[bool]] = None
-        self._executor: typing.Optional[concurrent.futures.ThreadPoolExecutor] = None
+        self._should_close_task: concurrent.futures.Future[bool] | None = None
+        self._executor: concurrent.futures.ThreadPoolExecutor | None = None
 
         self._max_message_size_bytes = max_message_size_bytes
         self._queue_size = queue_size
@@ -114,7 +112,7 @@ class WebSocketSession:
         )
         self._background_receive_task.start()
 
-        self._background_keepalive_ping_task: typing.Optional[threading.Thread] = None
+        self._background_keepalive_ping_task: threading.Thread | None = None
         if self._keepalive_ping_interval_seconds is not None:
             self._background_keepalive_ping_task = threading.Thread(
                 target=self._background_keepalive_ping,
@@ -250,7 +248,7 @@ class WebSocketSession:
         else:
             self.send_bytes(serialized_data.encode("utf-8"))
 
-    def receive(self, timeout: typing.Optional[float] = None) -> wsproto.events.Event:
+    def receive(self, timeout: float | None = None) -> wsproto.events.Event:
         """
         Receive an event from the server.
 
@@ -296,7 +294,7 @@ class WebSocketSession:
             raise WebSocketDisconnect(event.code, event.reason)
         return event
 
-    def receive_text(self, timeout: typing.Optional[float] = None) -> str:
+    def receive_text(self, timeout: float | None = None) -> str:
         """
         Receive text from the server.
 
@@ -336,7 +334,7 @@ class WebSocketSession:
             return event.data
         raise WebSocketInvalidTypeReceived(event)
 
-    def receive_bytes(self, timeout: typing.Optional[float] = None) -> bytes:
+    def receive_bytes(self, timeout: float | None = None) -> bytes:
         """
         Receive bytes from the server.
 
@@ -377,7 +375,7 @@ class WebSocketSession:
         raise WebSocketInvalidTypeReceived(event)
 
     def receive_json(
-        self, timeout: typing.Optional[float] = None, mode: JSONMode = "text"
+        self, timeout: float | None = None, mode: JSONMode = "text"
     ) -> typing.Any:
         """
         Receive JSON data from the server.
@@ -419,14 +417,14 @@ class WebSocketSession:
                     print("Connection closed")
         """
         assert mode in ["text", "binary"]
-        data: typing.Union[str, bytes]
+        data: str | bytes
         if mode == "text":
             data = self.receive_text(timeout)
         elif mode == "binary":
             data = self.receive_bytes(timeout)
         return json.loads(data)
 
-    def close(self, code: int = 1000, reason: typing.Optional[str] = None):
+    def close(self, code: int = 1000, reason: str | None = None):
         """
         Close the WebSocket session.
 
@@ -476,7 +474,7 @@ class WebSocketSession:
         Args:
             max_bytes: The maximum chunk size to read at each iteration.
         """
-        partial_message_buffer: typing.Union[str, bytes, None] = None
+        partial_message_buffer: str | bytes | None = None
         try:
             while not self._should_close.is_set():
                 data = self._wait_until_closed(self._read_stream, max_bytes)
@@ -519,7 +517,7 @@ class WebSocketSession:
             pass
 
     def _background_keepalive_ping(
-        self, interval_seconds: float, timeout_seconds: typing.Optional[float] = None
+        self, interval_seconds: float, timeout_seconds: float | None = None
     ) -> None:
         try:
             while not self._should_close.is_set():
@@ -576,14 +574,10 @@ class AsyncWebSocketSession:
             The webSocket handshake response.
     """
 
-    subprotocol: typing.Optional[str]
-    response: typing.Optional[httpx.Response]
-    _send_event: MemoryObjectSendStream[
-        typing.Union[wsproto.events.Event, HTTPXWSException]
-    ]
-    _receive_event: MemoryObjectReceiveStream[
-        typing.Union[wsproto.events.Event, HTTPXWSException]
-    ]
+    subprotocol: str | None
+    response: httpx.Response | None
+    _send_event: MemoryObjectSendStream[wsproto.events.Event | HTTPXWSException]
+    _receive_event: MemoryObjectReceiveStream[wsproto.events.Event | HTTPXWSException]
 
     def __init__(
         self,
@@ -591,13 +585,11 @@ class AsyncWebSocketSession:
         *,
         max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
         queue_size: int = DEFAULT_QUEUE_SIZE,
-        keepalive_ping_interval_seconds: typing.Optional[
-            float
-        ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-        keepalive_ping_timeout_seconds: typing.Optional[
-            float
-        ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        response: typing.Optional[httpx.Response] = None,
+        keepalive_ping_interval_seconds: float
+        | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+        keepalive_ping_timeout_seconds: float
+        | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+        response: httpx.Response | None = None,
     ) -> None:
         self.stream = stream
         self.connection = wsproto.connection.Connection(wsproto.ConnectionType.CLIENT)
@@ -625,7 +617,7 @@ class AsyncWebSocketSession:
     async def __aenter__(self) -> "AsyncWebSocketSession":
         async with contextlib.AsyncExitStack() as exit_stack:
             self._send_event, self._receive_event = anyio.create_memory_object_stream[
-                typing.Union[wsproto.events.Event, HTTPXWSException]
+                wsproto.events.Event | HTTPXWSException
             ]()
             exit_stack.enter_context(self._send_event)
             exit_stack.enter_context(self._receive_event)
@@ -651,9 +643,9 @@ class AsyncWebSocketSession:
 
     async def __aexit__(
         self,
-        exc_type: typing.Optional[type[BaseException]],
-        exc: typing.Optional[BaseException],
-        tb: typing.Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
     ) -> None:
         await self._exit_stack.aclose()
 
@@ -774,9 +766,7 @@ class AsyncWebSocketSession:
         else:
             await self.send_bytes(serialized_data.encode("utf-8"))
 
-    async def receive(
-        self, timeout: typing.Optional[float] = None
-    ) -> wsproto.events.Event:
+    async def receive(self, timeout: float | None = None) -> wsproto.events.Event:
         """
         Receive an event from the server.
 
@@ -823,7 +813,7 @@ class AsyncWebSocketSession:
             raise WebSocketDisconnect(event.code, event.reason)
         return event
 
-    async def receive_text(self, timeout: typing.Optional[float] = None) -> str:
+    async def receive_text(self, timeout: float | None = None) -> str:
         """
         Receive text from the server.
 
@@ -863,7 +853,7 @@ class AsyncWebSocketSession:
             return event.data
         raise WebSocketInvalidTypeReceived(event)
 
-    async def receive_bytes(self, timeout: typing.Optional[float] = None) -> bytes:
+    async def receive_bytes(self, timeout: float | None = None) -> bytes:
         """
         Receive bytes from the server.
 
@@ -904,7 +894,7 @@ class AsyncWebSocketSession:
         raise WebSocketInvalidTypeReceived(event)
 
     async def receive_json(
-        self, timeout: typing.Optional[float] = None, mode: JSONMode = "text"
+        self, timeout: float | None = None, mode: JSONMode = "text"
     ) -> typing.Any:
         """
         Receive JSON data from the server.
@@ -946,14 +936,14 @@ class AsyncWebSocketSession:
                     print("Connection closed")
         """
         assert mode in ["text", "binary"]
-        data: typing.Union[str, bytes]
+        data: str | bytes
         if mode == "text":
             data = await self.receive_text(timeout)
         elif mode == "binary":
             data = await self.receive_bytes(timeout)
         return json.loads(data)
 
-    async def close(self, code: int = 1000, reason: typing.Optional[str] = None):
+    async def close(self, code: int = 1000, reason: str | None = None):
         """
         Close the WebSocket session.
 
@@ -1001,7 +991,7 @@ class AsyncWebSocketSession:
         Args:
             max_bytes: The maximum chunk size to read at each iteration.
         """
-        partial_message_buffer: typing.Union[str, bytes, None] = None
+        partial_message_buffer: str | bytes | None = None
         try:
             while not self._should_close.is_set():
                 data = await self._read_stream(max_bytes)
@@ -1042,7 +1032,7 @@ class AsyncWebSocketSession:
             await self._send_event.send(WebSocketNetworkError())
 
     async def _background_keepalive_ping(
-        self, interval_seconds: float, timeout_seconds: typing.Optional[float] = None
+        self, interval_seconds: float, timeout_seconds: float | None = None
     ) -> None:
         while not self._should_close.is_set():
             await anyio.sleep(interval_seconds)
@@ -1065,7 +1055,7 @@ class AsyncWebSocketSession:
 
 
 def _get_headers(
-    subprotocols: typing.Optional[list[str]],
+    subprotocols: list[str] | None,
 ) -> dict[str, typing.Any]:
     headers = {
         "connection": "upgrade",
@@ -1085,13 +1075,11 @@ def _connect_ws(
     *,
     max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
     queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
+    keepalive_ping_interval_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+    keepalive_ping_timeout_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+    subprotocols: list[str] | None = None,
     session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
@@ -1117,17 +1105,15 @@ def _connect_ws(
 @contextlib.contextmanager
 def connect_ws(
     url: str,
-    client: typing.Optional[httpx.Client] = None,
+    client: httpx.Client | None = None,
     *,
     max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
     queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
+    keepalive_ping_interval_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+    keepalive_ping_timeout_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+    subprotocols: list[str] | None = None,
     session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
@@ -1226,13 +1212,11 @@ async def _aconnect_ws(
     *,
     max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
     queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
+    keepalive_ping_interval_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+    keepalive_ping_timeout_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+    subprotocols: list[str] | None = None,
     session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
@@ -1258,17 +1242,15 @@ async def _aconnect_ws(
 @contextlib.asynccontextmanager
 async def aconnect_ws(
     url: str,
-    client: typing.Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
     *,
     max_message_size_bytes: int = DEFAULT_MAX_MESSAGE_SIZE_BYTES,
     queue_size: int = DEFAULT_QUEUE_SIZE,
-    keepalive_ping_interval_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
-    keepalive_ping_timeout_seconds: typing.Optional[
-        float
-    ] = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-    subprotocols: typing.Optional[list[str]] = None,
+    keepalive_ping_interval_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
+    keepalive_ping_timeout_seconds: float
+    | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
+    subprotocols: list[str] | None = None,
     session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
