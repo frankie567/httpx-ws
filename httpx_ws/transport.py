@@ -8,7 +8,7 @@ from httpcore import AsyncNetworkStream
 from httpx import ASGITransport, AsyncByteStream, Request, Response
 from wsproto.frame_protocol import CloseReason
 
-from ._exceptions import WebSocketDisconnect
+from ._exceptions import WebSocketDisconnect, WebSocketUpgradeError
 
 Scope = dict[str, typing.Any]
 Message = dict[str, typing.Any]
@@ -64,6 +64,24 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             if message["type"] == "websocket.disconnect":
                 await stack.aclose()
                 raise WebSocketDisconnect(message["code"], message.get("reason"))
+
+            # Websocket Denial Response extension
+            # Ref: https://asgi.readthedocs.io/en/latest/extensions.html#websocket-denial-response
+            if message["type"] == "websocket.http.response.start":
+                status_code: int = message["status"]
+                headers: list[tuple[bytes, bytes]] = message["headers"]
+                body: list[bytes] = []
+                while True:
+                    message = await self.receive()
+                    assert message["type"] == "websocket.http.response.body"
+                    body.append(message["body"])
+                    if not message.get("more_body", False):
+                        break
+
+                await stack.aclose()
+                raise WebSocketUpgradeError(
+                    Response(status_code, headers=headers, content=b"".join(body))
+                )
 
             assert message["type"] == "websocket.accept"
             retval = self, self._build_accept_response(message)

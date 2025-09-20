@@ -10,7 +10,7 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket
 
-from httpx_ws import WebSocketDisconnect, aconnect_ws
+from httpx_ws import WebSocketDisconnect, WebSocketUpgradeError, aconnect_ws
 from httpx_ws.transport import (
     ASGIWebSocketAsyncNetworkStream,
     ASGIWebSocketTransport,
@@ -126,6 +126,22 @@ class TestASGIWebSocketAsyncNetworkStream:
         with pytest.raises(WebSocketDisconnect):
             async with ASGIWebSocketAsyncNetworkStream(app, scope):
                 pass
+
+    async def test_denial_response(self, scope):
+        async def app(scope, receive, send):
+            await send(
+                {"type": "websocket.http.response.start", "status": 401, "headers": []}
+            )
+            await send(
+                {"type": "websocket.http.response.body", "body": b"Unauthorized"}
+            )
+
+        with pytest.raises(WebSocketUpgradeError) as excinfo:
+            async with ASGIWebSocketAsyncNetworkStream(app, scope):
+                pass
+
+        assert excinfo.value.response.status_code == 401
+        assert excinfo.value.response.content == b"Unauthorized"
 
     async def test_exception(self, scope):
         async def app(scope, receive, send):
