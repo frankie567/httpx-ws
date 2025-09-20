@@ -1,4 +1,4 @@
-# Client
+# Class-based Client
 
 In addition to the function-based APIs `connect_ws` and `aconnect_ws`, `httpx-ws` also provides class-based APIs with `WebSocketClient` and `AsyncWebSocketClient`.
 
