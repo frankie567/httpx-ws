@@ -437,6 +437,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "flaky" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
@@ -459,6 +460,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "flaky" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extras = ["python"] },
