@@ -1,72 +1,3 @@
-[tool.ruff]
-target-version = "py310"
-
-[tool.ruff.lint]
-extend-select = ["I", "UP"]
-
-[tool.pytest.ini_options]
-addopts = "--cov=httpx_ws/ --cov-report=term-missing"
-
-[tool.basedpyright]
-venv = "httpx-ws"
-venvPath = "./.hatch"
-reportUnannotatedClassAttribute = 'none'
-reportUnknownArgumentType = 'none'
-reportUnknownParameterType = 'none'
-reportMissingParameterType = 'none'
-reportUnusedParameter = 'none'
-reportUnusedCallResult = 'none'
-reportUnknownVariableType = 'none'
-reportExplicitAny = 'none'
-
-[tool.hatch]
-
-[tool.hatch.metadata]
-allow-direct-references = true
-
-[tool.hatch.version]
-source = "regex_commit"
-commit_extra_args = ["-e"]
-path = "httpx_ws/__init__.py"
-
-[tool.hatch.envs.default]
-installer = "uv"
-dependencies = [
-    "mypy",
-    "ruff",
-    "pytest",
-    "pytest-cov",
-    "starlette",
-    "uvicorn[standard]",
-    "mkdocs-material",
-    "mkdocstrings[python]",
-    "trio",
-    "flaky"
-]
-
-[tool.hatch.envs.default.scripts]
-test = "pytest"
-test-cov-xml = "pytest --cov-report=xml"
-lint = [
-  "ruff format .",
-  "ruff check --fix .",
-  "mypy httpx_ws/",
-]
-lint-check = [
-  "ruff format --check .",
-  "ruff check .",
-  "mypy httpx_ws/",
-]
-docs-serve = "mkdocs serve"
-docs-build = "mkdocs build"
-
-[tool.hatch.build.targets.sdist]
-support-legacy = true  # Create setup.py
-
-[build-system]
-requires = ["hatchling", "hatch-regex-commit"]
-build-backend = "hatchling.build"
-
 [project]
 name = "httpx-ws"
 authors = [
@@ -98,3 +29,41 @@ dependencies = [
 [project.urls]
 Documentation = "https://frankie567.github.io/httpx-ws/"
 Source = "https://github.com/frankie567/httpx-ws"
+
+[build-system]
+requires = ["hatchling", "hatch-regex-commit"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "regex_commit"
+commit_extra_args = ["-e"]
+path = "httpx_ws/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+support-legacy = true  # Create setup.py
+
+[dependency-groups]
+dev = [
+    "mypy",
+    "ruff",
+    "pytest",
+    "pytest-cov",
+    "starlette",
+    "uvicorn[standard]",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+    "trio",
+    "flaky"
+]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+extend-select = ["I", "UP"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=httpx_ws/ --cov-report=term-missing"
+
+[tool.uv]
+default-groups = ["dev"]
