@@ -65,7 +65,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             stack.push_async_callback(self.aclose)
 
             if message["type"] == "websocket.close":
-                await stack.pop_all().aclose()
+                await stack.aclose()
                 raise WebSocketDisconnect(message["code"], message.get("reason"))
 
             # Websocket Denial Response extension
