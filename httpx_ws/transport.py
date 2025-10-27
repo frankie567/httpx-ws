@@ -183,7 +183,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 class ASGIWebSocketTransport(ASGITransport):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.exit_stacks: list[contextlib.AsyncExitStack] = []
+        self.exit_stack: contextlib.AsyncExitStack | None = None
 
     async def __aenter__(self) -> "ASGIWebSocketTransport":
         async with contextlib.AsyncExitStack() as stack:
@@ -201,6 +201,7 @@ class ASGIWebSocketTransport(ASGITransport):
         exc_tb: TracebackType | None = None,
     ) -> None:
         await super().__aexit__(exc_type, exc_val, exc_tb)
+        assert self.exit_stack is not None
         await self.exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def handle_async_request(self, request: Request) -> Response:
@@ -230,6 +231,20 @@ class ASGIWebSocketTransport(ASGITransport):
 
         return await super().handle_async_request(request)
 
+    async def _create_asgi_websocket_async_network_stream(
+        self,
+        *,
+        task_status: anyio.abc.TaskStatus[
+            tuple["ASGIWebSocketAsyncNetworkStream", bytes]
+        ],
+    ) -> None:
+        async with ASGIWebSocketAsyncNetworkStream(
+            self.app,  # type: ignore[arg-type]
+            self.scope,
+            self._task_group,
+        ) as result:
+            task_status.started(result)
+
     async def _handle_ws_request(
         self,
         request: Request,
@@ -238,12 +253,9 @@ class ASGIWebSocketTransport(ASGITransport):
         assert isinstance(request.stream, AsyncByteStream)
 
         self.scope = scope
-        async with contextlib.AsyncExitStack() as stack:
-            stream, accept_response = await stack.enter_async_context(
-                ASGIWebSocketAsyncNetworkStream(self.app, self.scope, self._task_group)  # type: ignore[arg-type]
-            )
-            self.exit_stacks.append(stack.pop_all())
-
+        stream, accept_response = await self._task_group.start(
+            self._create_asgi_websocket_async_network_stream
+        )
         accept_response_lines = accept_response.decode("utf-8").splitlines()
         headers = [
             typing.cast(tuple[str, str], line.split(": ", 1))
@@ -258,5 +270,5 @@ class ASGIWebSocketTransport(ASGITransport):
         )
 
     async def aclose(self) -> None:
-        for stack in self.exit_stacks[::-1]:
-            await stack.aclose()
+        if self.exit_stack:
+            await self.exit_stack.aclose()
