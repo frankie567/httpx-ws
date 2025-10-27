@@ -183,14 +183,14 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 class ASGIWebSocketTransport(ASGITransport):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.exit_stack: contextlib.AsyncExitStack | None = None
+        self._exit_stack: contextlib.AsyncExitStack | None = None
 
     async def __aenter__(self) -> "ASGIWebSocketTransport":
         async with contextlib.AsyncExitStack() as stack:
             self._task_group = await stack.enter_async_context(
                 anyio.create_task_group()
             )
-            self.exit_stack = stack.pop_all()
+            self._exit_stack = stack.pop_all()
 
         return self
 
@@ -201,8 +201,8 @@ class ASGIWebSocketTransport(ASGITransport):
         exc_tb: TracebackType | None = None,
     ) -> None:
         await super().__aexit__(exc_type, exc_val, exc_tb)
-        assert self.exit_stack is not None
-        await self.exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+        assert self._exit_stack is not None
+        await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def handle_async_request(self, request: Request) -> Response:
         scheme = request.url.scheme
@@ -238,12 +238,14 @@ class ASGIWebSocketTransport(ASGITransport):
             tuple["ASGIWebSocketAsyncNetworkStream", bytes]
         ],
     ) -> None:
-        async with ASGIWebSocketAsyncNetworkStream(
+        stream = ASGIWebSocketAsyncNetworkStream(
             self.app,  # type: ignore[arg-type]
             self.scope,
             self._task_group,
-        ) as result:
-            task_status.started(result)
+        )
+        assert self._exit_stack is not None
+        result = await self._exit_stack.enter_async_context(stream)
+        task_status.started(result)
 
     async def _handle_ws_request(
         self,
@@ -268,7 +270,3 @@ class ASGIWebSocketTransport(ASGITransport):
             headers=headers,
             extensions={"network_stream": stream},
         )
-
-    async def aclose(self) -> None:
-        if self.exit_stack:
-            await self.exit_stack.aclose()

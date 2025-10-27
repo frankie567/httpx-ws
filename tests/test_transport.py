@@ -292,3 +292,28 @@ async def test_cancel_scope_integrity():
         with CancelScope():
             async with aconnect_ws("ws://localhost:8000/ws", client):
                 pass
+
+
+@pytest.mark.anyio
+async def test_receive():
+    global result
+    result = None
+
+    async def websocket_endpoint(websocket: WebSocket):
+        global result
+        await websocket.accept()
+        result = await websocket.receive_text()
+        assert False, "FOO"
+        await websocket.close()
+
+    app = Starlette(
+        routes=[
+            WebSocketRoute("/ws", endpoint=websocket_endpoint),
+        ]
+    )
+
+    async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
+        async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
+            await ws.send_text("RESULT")
+
+    assert result == "RESULT"
