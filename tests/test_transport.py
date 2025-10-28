@@ -181,6 +181,19 @@ class TestASGIWebSocketAsyncNetworkStream:
         assert excinfo.value.exceptions[0].code == 1011
         assert excinfo.value.exceptions[0].reason == "Error"
 
+    async def test_never_accepts(self, scope: Scope):
+        async def app(scope, receive, send):
+            return
+
+        with pytest.raises(ExceptionGroup) as excinfo:
+            async with (
+                create_task_group() as tg,
+                ASGIWebSocketAsyncNetworkStream(app, scope, tg),
+            ):
+                pass
+
+        assert excinfo.group_contains(RuntimeError)
+
 
 @pytest.fixture
 def test_app() -> Starlette:

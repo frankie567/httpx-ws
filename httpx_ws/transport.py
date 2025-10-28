@@ -60,7 +60,14 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         self._task_group.start_soon(self._run)
         async with contextlib.AsyncExitStack() as stack:
             await self.send({"type": "websocket.connect"})
-            message = await self.receive()
+
+            try:
+                message = await self.receive(0.1)
+            except TimeoutError as e:
+                raise RuntimeError(
+                    "WebSocket didn't accept the connection in time. "
+                    "Did you forget to call accept()?"
+                ) from e
 
             stack.push_async_callback(self.aclose)
 
