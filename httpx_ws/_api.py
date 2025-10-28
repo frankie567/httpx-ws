@@ -12,6 +12,7 @@ import anyio
 import httpcore
 import httpx
 import wsproto
+import wsproto.utilities
 from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
 from httpcore import AsyncNetworkStream, NetworkStream
 from wsproto.frame_protocol import CloseReason
@@ -1036,7 +1037,13 @@ class AsyncWebSocketSession:
     ) -> None:
         while not self._should_close.is_set():
             await anyio.sleep(interval_seconds)
-            pong_callback = await self.ping()
+
+            try:
+                pong_callback = await self.ping()
+            # Connection is closing, exit the task
+            except wsproto.utilities.LocalProtocolError:
+                return
+
             if timeout_seconds is not None:
                 try:
                     with anyio.fail_after(timeout_seconds):
