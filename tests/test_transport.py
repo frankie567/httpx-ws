@@ -296,14 +296,11 @@ async def test_cancel_scope_integrity():
 
 @pytest.mark.anyio
 async def test_receive():
-    global result
-    result = None
+    messages: list[str] = []
 
     async def websocket_endpoint(websocket: WebSocket):
-        global result
         await websocket.accept()
-        result = await websocket.receive_text()
-        assert False, "FOO"
+        messages.append(await websocket.receive_text())
         await websocket.close()
 
     app = Starlette(
@@ -316,4 +313,5 @@ async def test_receive():
         async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
             await ws.send_text("RESULT")
 
-    assert result == "RESULT"
+    assert len(messages) == 1
+    assert messages[0] == "RESULT"
