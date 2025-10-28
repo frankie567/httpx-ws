@@ -68,3 +68,6 @@ addopts = "--cov=httpx_ws/ --cov-report=term-missing"
 
 [tool.uv]
 default-groups = ["dev"]
+
+[tool.basedpyright]
+typeCheckingMode = "off"
