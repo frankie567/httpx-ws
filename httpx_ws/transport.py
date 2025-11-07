@@ -34,7 +34,11 @@ class UnhandledWebSocketEvent(ASGIWebSocketTransportError):
 
 class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     def __init__(
-        self, app: ASGIApp, scope: Scope, task_group: anyio.abc.TaskGroup
+        self,
+        app: ASGIApp,
+        scope: Scope,
+        task_group: anyio.abc.TaskGroup,
+        initial_receive_timeout: float = 1.0,
     ) -> None:
         self.app = app
         self.scope = scope
@@ -45,6 +49,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             *anyio.create_memory_object_stream[Message](max_buffer_size=math.inf)
         )
         self._task_group = task_group
+        self._initial_receive_timeout = initial_receive_timeout
         self.connection = wsproto.WSConnection(wsproto.ConnectionType.SERVER)
         self.connection.initiate_upgrade_connection(scope["headers"], scope["path"])
         self._aentered = False
@@ -62,7 +67,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
             await self.send({"type": "websocket.connect"})
 
             try:
-                message = await self.receive(0.1)
+                message = await self.receive(self._initial_receive_timeout)
             except TimeoutError as e:
                 raise RuntimeError(
                     "WebSocket didn't accept the connection in time. "
@@ -188,9 +193,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
 
 
 class ASGIWebSocketTransport(ASGITransport):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, initial_receive_timeout: float = 1.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._exit_stack: contextlib.AsyncExitStack | None = None
+        self._initial_receive_timeout = initial_receive_timeout
 
     async def __aenter__(self) -> "ASGIWebSocketTransport":
         async with contextlib.AsyncExitStack() as stack:
@@ -249,6 +255,7 @@ class ASGIWebSocketTransport(ASGITransport):
             self.app,  # type: ignore[arg-type]
             self.scope,
             self._task_group,
+            self._initial_receive_timeout,
         )
         assert self._exit_stack is not None
         result = await self._exit_stack.enter_async_context(stream)
