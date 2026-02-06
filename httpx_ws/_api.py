@@ -6,7 +6,6 @@ import queue
 import secrets
 import threading
 import typing
-from types import TracebackType
 
 import anyio
 import httpcore
@@ -564,7 +563,7 @@ class WebSocketSession:
         return data
 
 
-class AsyncWebSocketSession:
+class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
     """
     Async context manager representing an opened WebSocket session.
 
@@ -615,17 +614,16 @@ class AsyncWebSocketSession:
             self._keepalive_ping_interval_seconds = keepalive_ping_interval_seconds
             self._keepalive_ping_timeout_seconds = keepalive_ping_timeout_seconds
 
-    async def __aenter__(self) -> "AsyncWebSocketSession":
-        async with contextlib.AsyncExitStack() as exit_stack:
-            self._send_event, self._receive_event = anyio.create_memory_object_stream[
-                wsproto.events.Event | HTTPXWSException
-            ]()
-            exit_stack.enter_context(self._send_event)
-            exit_stack.enter_context(self._receive_event)
+    @contextlib.asynccontextmanager
+    async def __asynccontextmanager__(
+        self,
+    ) -> "typing.AsyncGenerator[AsyncWebSocketSession, None]":
+        self._send_event, self._receive_event = anyio.create_memory_object_stream[
+            wsproto.events.Event | HTTPXWSException
+        ]()
+        self._background_task_group = anyio.create_task_group()
 
-            self._background_task_group = anyio.create_task_group()
-            await exit_stack.enter_async_context(self._background_task_group)
-
+        async with self._send_event, self._receive_event, self._background_task_group:
             self._background_task_group.start_soon(
                 self._background_receive, self._max_message_size_bytes
             )
@@ -636,19 +634,12 @@ class AsyncWebSocketSession:
                     self._keepalive_ping_timeout_seconds,
                 )
 
-            exit_stack.callback(self._background_task_group.cancel_scope.cancel)
-            exit_stack.push_async_callback(self.close)
-            self._exit_stack = exit_stack.pop_all()
-
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: TracebackType | None,
-    ) -> None:
-        await self._exit_stack.aclose()
+            try:
+                yield self
+            finally:
+                self._background_task_group.cancel_scope.cancel()
+                with anyio.CancelScope(shield=True):
+                    await self.close()
 
     async def ping(self, payload: bytes = b"") -> anyio.Event:
         """
