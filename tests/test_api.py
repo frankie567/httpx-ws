@@ -357,9 +357,7 @@ class TestReceive:
                 transport=httpx.AsyncHTTPTransport(uds=socket)
             ) as aclient:
                 async with aconnect_ws(
-                    "http://socket/ws",
-                    aclient,
-                    keepalive_ping_interval_seconds=None,
+                    "http://socket/ws", aclient, max_message_size_bytes=1024
                 ) as aws:
                     event = await aws.receive()
                     assert isinstance(event, wsproto.events.Message)
