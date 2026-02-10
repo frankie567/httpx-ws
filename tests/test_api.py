@@ -95,7 +95,7 @@ class TestSend:
                 self._should_close = True
 
         stream = AsyncMockNetworkStream()
-        with pytest.RaisesGroup(WebSocketNetworkError):
+        with pytest.raises(WebSocketNetworkError):
             async with AsyncWebSocketSession(stream) as websocket_session:
                 await websocket_session.send(wsproto.events.Ping())
 
@@ -275,7 +275,7 @@ class TestReceive:
                 pass
 
         stream = AsyncMockNetworkStream()
-        with pytest.RaisesGroup(WebSocketNetworkError):
+        with pytest.raises(WebSocketNetworkError):
             async with AsyncWebSocketSession(stream) as websocket_session:
                 await websocket_session.receive()
 
@@ -296,7 +296,7 @@ class TestReceive:
                 pass
 
         stream = AsyncMockNetworkStream()
-        with pytest.RaisesGroup(WebSocketNetworkError):
+        with pytest.raises(WebSocketNetworkError):
             async with AsyncWebSocketSession(stream) as websocket_session:
                 await websocket_session.receive()
 
@@ -684,7 +684,7 @@ class TestKeepalivePing:
                 self._should_close = True
 
         stream = MockAsyncNetworkStream()
-        with pytest.RaisesGroup(WebSocketNetworkError):
+        with pytest.raises(WebSocketNetworkError):
             async with AsyncWebSocketSession(
                 stream,
                 keepalive_ping_interval_seconds=0.1,

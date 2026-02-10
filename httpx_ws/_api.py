@@ -8,6 +8,7 @@ import threading
 import typing
 
 import anyio
+import exceptiongroup
 import httpcore
 import httpx
 import wsproto
@@ -25,6 +26,9 @@ from ._exceptions import (
 )
 from ._ping import AsyncPingManager, PingManager
 from .transport import ASGIWebSocketAsyncNetworkStream
+
+if typing.TYPE_CHECKING:
+    import typing_extensions
 
 JSONMode = typing.Literal["text", "binary"]
 TaskFunction = typing.TypeVar("TaskFunction")
@@ -623,23 +627,37 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
         ]()
         self._background_task_group = anyio.create_task_group()
 
-        async with self._send_event, self._receive_event, self._background_task_group:
-            self._background_task_group.start_soon(
-                self._background_receive, self._max_message_size_bytes
-            )
-            if self._keepalive_ping_interval_seconds is not None:
-                self._background_task_group.start_soon(
-                    self._background_keepalive_ping,
-                    self._keepalive_ping_interval_seconds,
-                    self._keepalive_ping_timeout_seconds,
-                )
+        def unwrap_network_error(
+            exc: exceptiongroup.BaseExceptionGroup,
+        ) -> "typing_extensions.Never":
+            raise exc.exceptions[0]
 
-            try:
-                yield self
-            finally:
-                self._background_task_group.cancel_scope.cancel()
-                with anyio.CancelScope(shield=True):
-                    await self.close()
+        with exceptiongroup.catch(
+            {
+                WebSocketNetworkError: unwrap_network_error,
+            }
+        ):
+            async with (
+                self._send_event,
+                self._receive_event,
+                self._background_task_group,
+            ):
+                self._background_task_group.start_soon(
+                    self._background_receive, self._max_message_size_bytes
+                )
+                if self._keepalive_ping_interval_seconds is not None:
+                    self._background_task_group.start_soon(
+                        self._background_keepalive_ping,
+                        self._keepalive_ping_interval_seconds,
+                        self._keepalive_ping_timeout_seconds,
+                    )
+
+                try:
+                    yield self
+                finally:
+                    self._background_task_group.cancel_scope.cancel()
+                    with anyio.CancelScope(shield=True):
+                        await self.close()
 
     async def ping(self, payload: bytes = b"") -> anyio.Event:
         """
