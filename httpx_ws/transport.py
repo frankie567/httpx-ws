@@ -106,6 +106,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> bool | None:
         return await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
+    async def _close_queues(self) -> None:
+        await self._receive_queue.aclose()
+        await self._send_queue.aclose()
+
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
         message: Message = await self.receive(timeout=timeout)
         type = message["type"]
@@ -147,7 +151,12 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 raise UnhandledWebSocketEvent(event)
 
     async def aclose(self) -> None:
-        await self.send({"type": "websocket.disconnect"})
+        try:
+            await self.send(
+                {"type": "websocket.disconnect", "code": CloseReason.NORMAL_CLOSURE}
+            )
+        except anyio.ClosedResourceError:
+            return
 
     async def send(self, message: Message) -> None:
         await self._receive_queue.send(message)
@@ -173,7 +182,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 "code": CloseReason.INTERNAL_ERROR,
                 "reason": str(e),
             }
-            await self._asgi_send(message)
+            try:
+                await self._asgi_send(message)
+            except anyio.ClosedResourceError:
+                return
 
     async def _asgi_receive(self) -> Message:
         return await self._receive_queue.receive()
@@ -197,15 +209,22 @@ class ASGIWebSocketTransport(ASGITransport):
         super().__init__(*args, **kwargs)
         self._exit_stack: contextlib.AsyncExitStack | None = None
         self._initial_receive_timeout = initial_receive_timeout
+        self._streams: list[ASGIWebSocketAsyncNetworkStream] = []
 
     async def __aenter__(self) -> "ASGIWebSocketTransport":
         async with contextlib.AsyncExitStack() as stack:
+            stack.push_async_callback(self._close_all_streams)
             self._task_group = await stack.enter_async_context(
                 anyio.create_task_group()
             )
             self._exit_stack = stack.pop_all()
 
         return self
+
+    async def _close_all_streams(self) -> None:
+        for stream in self._streams:
+            await stream._close_queues()
+        self._streams.clear()
 
     async def __aexit__(
         self,
@@ -259,6 +278,7 @@ class ASGIWebSocketTransport(ASGITransport):
         )
         assert self._exit_stack is not None
         result = await self._exit_stack.enter_async_context(stream)
+        self._streams.append(stream)
         task_status.started(result)
 
     async def _handle_ws_request(

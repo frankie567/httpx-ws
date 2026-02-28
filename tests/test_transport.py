@@ -6,7 +6,7 @@ from typing import Any
 import httpx
 import pytest
 import wsproto
-from anyio import CancelScope, create_task_group
+from anyio import CancelScope, ClosedResourceError, create_task_group
 from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route, WebSocketRoute
@@ -194,6 +194,19 @@ class TestASGIWebSocketAsyncNetworkStream:
 
         assert excinfo.group_contains(RuntimeError)
 
+    async def test_app_exception_with_closed_send_queue(self, scope: Scope):
+        async def app(scope, receive, send):
+            await send({"type": "websocket.accept"})
+            await receive()
+            raise Exception("App error")
+
+        async with (
+            create_task_group() as tg,
+            ASGIWebSocketAsyncNetworkStream(app, scope, tg) as (stream, _),
+        ):
+            await stream._send_queue.aclose()
+            await stream.send({"type": "websocket.receive", "text": "trigger"})
+
 
 @pytest.fixture
 def test_app() -> Starlette:
@@ -246,6 +259,59 @@ class TestASGIWebSocketTransport:
             assert isinstance(
                 response.extensions["network_stream"], ASGIWebSocketAsyncNetworkStream
             )
+
+    async def test_transport_exit_closes_stream_queues(
+        self,
+        test_app: Starlette,
+        websocket_request_headers: dict[str, str],
+    ):
+        async with ASGIWebSocketTransport(app=test_app) as transport:
+            request = httpx.Request(
+                "GET", "ws://localhost:8000/ws", headers=websocket_request_headers
+            )
+            response = await transport.handle_async_request(request)
+            stream = response.extensions["network_stream"]
+
+        with pytest.raises(ClosedResourceError):
+            await stream._receive_queue.send({})
+        with pytest.raises(ClosedResourceError):
+            await stream._send_queue.send({})
+
+    async def test_transport_exit_closes_multiple_stream_queues(
+        self,
+        test_app: Starlette,
+        websocket_request_headers: dict[str, str],
+    ):
+        async with ASGIWebSocketTransport(app=test_app) as transport:
+            streams = []
+            for _ in range(3):
+                request = httpx.Request(
+                    "GET",
+                    "ws://localhost:8000/ws",
+                    headers=websocket_request_headers,
+                )
+                response = await transport.handle_async_request(request)
+                streams.append(response.extensions["network_stream"])
+
+        for stream in streams:
+            with pytest.raises(ClosedResourceError):
+                await stream._receive_queue.send({})
+            with pytest.raises(ClosedResourceError):
+                await stream._send_queue.send({})
+
+    async def test_aclose_after_transport_exit_does_not_raise(
+        self,
+        test_app: Starlette,
+        websocket_request_headers: dict[str, str],
+    ):
+        async with ASGIWebSocketTransport(app=test_app) as transport:
+            request = httpx.Request(
+                "GET", "ws://localhost:8000/ws", headers=websocket_request_headers
+            )
+            response = await transport.handle_async_request(request)
+            stream = response.extensions["network_stream"]
+
+        await stream.aclose()
 
 
 @pytest.mark.anyio
