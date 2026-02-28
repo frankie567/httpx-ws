@@ -260,31 +260,16 @@ class TestASGIWebSocketTransport:
                 response.extensions["network_stream"], ASGIWebSocketAsyncNetworkStream
             )
 
+    @pytest.mark.parametrize("stream_count", [1, 3])
     async def test_transport_exit_closes_stream_queues(
         self,
-        test_app: Starlette,
-        websocket_request_headers: dict[str, str],
-    ):
-        async with ASGIWebSocketTransport(app=test_app) as transport:
-            request = httpx.Request(
-                "GET", "ws://localhost:8000/ws", headers=websocket_request_headers
-            )
-            response = await transport.handle_async_request(request)
-            stream = response.extensions["network_stream"]
-
-        with pytest.raises(ClosedResourceError):
-            await stream._receive_queue.send({})
-        with pytest.raises(ClosedResourceError):
-            await stream._send_queue.send({})
-
-    async def test_transport_exit_closes_multiple_stream_queues(
-        self,
+        stream_count: int,
         test_app: Starlette,
         websocket_request_headers: dict[str, str],
     ):
         async with ASGIWebSocketTransport(app=test_app) as transport:
             streams = []
-            for _ in range(3):
+            for _ in range(stream_count):
                 request = httpx.Request(
                     "GET",
                     "ws://localhost:8000/ws",
