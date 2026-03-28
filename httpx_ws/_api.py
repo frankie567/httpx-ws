@@ -266,7 +266,7 @@ class WebSocketSession:
             A raw [wsproto.events.Event][wsproto.events.Event].
 
         Raises:
-            queue.Empty: No event was received before the timeout delay.
+            TimeoutError: No event was received before the timeout delay.
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
 
@@ -282,12 +282,15 @@ class WebSocketSession:
 
                 try:
                     event = ws.receive(timeout=2.)
-                except queue.Empty:
+                except TimeoutError:
                     print("No event received.")
                 except WebSocketDisconnect:
                     print("Connection closed")
         """
-        event = self._events.get(block=True, timeout=timeout)
+        try:
+            event = self._events.get(block=True, timeout=timeout)
+        except queue.Empty as e:
+            raise TimeoutError from e
         if isinstance(event, HTTPXWSException):
             raise event
         if isinstance(event, wsproto.events.CloseConnection):
@@ -307,7 +310,7 @@ class WebSocketSession:
             Text data.
 
         Raises:
-            queue.Empty: No event was received before the timeout delay.
+            TimeoutError: No event was received before the timeout delay.
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event was not a text message.
@@ -324,7 +327,7 @@ class WebSocketSession:
 
                 try:
                     event = ws.receive_text(timeout=2.)
-                except queue.Empty:
+                except TimeoutError:
                     print("No text received.")
                 except WebSocketDisconnect:
                     print("Connection closed")
@@ -347,7 +350,7 @@ class WebSocketSession:
             Bytes data.
 
         Raises:
-            queue.Empty: No event was received before the timeout delay.
+            TimeoutError: No event was received before the timeout delay.
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event was not a bytes message.
@@ -364,7 +367,7 @@ class WebSocketSession:
 
                 try:
                     data = ws.receive_bytes(timeout=2.)
-                except queue.Empty:
+                except TimeoutError:
                     print("No data received.")
                 except WebSocketDisconnect:
                     print("Connection closed")
@@ -393,7 +396,7 @@ class WebSocketSession:
             Parsed JSON data.
 
         Raises:
-            queue.Empty: No event was received before the timeout delay.
+            TimeoutError: No event was received before the timeout delay.
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event
@@ -411,7 +414,7 @@ class WebSocketSession:
 
                 try:
                     data = ws.receive_json(timeout=2.)
-                except queue.Empty:
+                except TimeoutError:
                     print("No data received.")
                 except WebSocketDisconnect:
                     print("Connection closed")
