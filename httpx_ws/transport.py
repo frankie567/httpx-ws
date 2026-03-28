@@ -147,7 +147,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 raise UnhandledWebSocketEvent(event)
 
     async def aclose(self) -> None:
-        await self.send({"type": "websocket.disconnect"})
+        with contextlib.suppress(anyio.ClosedResourceError):
+            await self.send({"type": "websocket.disconnect"})
+        await self._receive_queue.aclose()
+        await self._send_queue.aclose()
 
     async def send(self, message: Message) -> None:
         await self._receive_queue.send(message)
@@ -163,8 +166,8 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         The sub-thread in which the websocket session runs.
         """
         scope = self.scope
-        receive = self._asgi_receive
-        send = self._asgi_send
+        receive = self._receive_queue.receive
+        send = self._send_queue.send
         try:
             await self.app(scope, receive, send)
         except Exception as e:
@@ -173,13 +176,8 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                 "code": CloseReason.INTERNAL_ERROR,
                 "reason": str(e),
             }
-            await self._asgi_send(message)
-
-    async def _asgi_receive(self) -> Message:
-        return await self._receive_queue.receive()
-
-    async def _asgi_send(self, message: Message) -> None:
-        await self._send_queue.send(message)
+            with contextlib.suppress(anyio.ClosedResourceError):
+                await send(message)
 
     def _build_accept_response(self, message: Message) -> bytes:
         subprotocol = message.get("subprotocol", None)
