@@ -3,6 +3,7 @@ import secrets
 import sys
 from typing import Any
 
+import anyio
 import httpx
 import pytest
 import wsproto
@@ -78,6 +79,9 @@ class TestASGIWebSocketAsyncNetworkStream:
 
             close_event = wsproto.events.CloseConnection(1000)
             await stream.write(connection.send(close_event))
+
+            # Add a small delay to ensure the app has processed all messages
+            await anyio.sleep(0.1)
 
         assert received_messages == [
             {"type": "websocket.connect"},
