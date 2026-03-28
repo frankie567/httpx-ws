@@ -258,6 +258,28 @@ class TestReceive:
             with WebSocketSession(stream) as websocket_session:
                 websocket_session.receive()
 
+    def test_receive_timeout(self):
+        class MockNetworkStream(NetworkStream):
+            def __init__(self) -> None:
+                self.connection = wsproto.connection.Connection(
+                    wsproto.connection.ConnectionType.SERVER
+                )
+
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
+                time.sleep(0.2)
+                return b""
+
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
+                pass
+
+            def close(self) -> None:
+                pass
+
+        stream = MockNetworkStream()
+        with pytest.raises(TimeoutError):
+            with WebSocketSession(stream) as websocket_session:
+                websocket_session.receive(timeout=0.1)
+
     async def test_async_receive_error(self):
         class AsyncMockNetworkStream(AsyncNetworkStream):
             def __init__(self) -> None:
