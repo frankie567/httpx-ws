@@ -169,6 +169,15 @@
         "bug",
         "code"
       ]
+    },
+    {
+      "login": "Flamefork",
+      "name": "Ilia Ablamonov",
+      "avatar_url": "https://avatars.githubusercontent.com/u/20203?v=4",
+      "profile": "http://flamefork.ru/",
+      "contributions": [
+        "bug"
+      ]
     }
   ],
   "contributorsPerLine": 7,
