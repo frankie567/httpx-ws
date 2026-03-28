@@ -567,6 +567,28 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
     """
     Async context manager representing an opened WebSocket session.
 
+    Internally, this session uses an anyio task group to manage background tasks.
+    As a result, exceptions that are not caught inside the context manager
+    and propagate out of the `async with` block will be wrapped
+    in an [ExceptionGroup][ExceptionGroup].
+
+    To handle them, use the `except*` syntax:
+
+        async with AsyncWebSocketSession(stream) as ws:
+            try:
+                data = await ws.receive_text()
+            except WebSocketDisconnect:
+                # Caught inside the context manager: plain exception.
+                print("Connection closed")
+
+        # If not caught inside:
+        try:
+            async with AsyncWebSocketSession(stream) as ws:
+                data = await ws.receive_text()
+        except* WebSocketDisconnect:
+            # Propagated out of the context manager: wrapped in ExceptionGroup.
+            print("Connection closed")
+
     Attributes:
         subprotocol (typing.Optional[str]):
             Optional protocol that has been accepted by the server.
@@ -682,6 +704,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
         Raises:
             WebSocketNetworkError: A network error occured.
 
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
+
         Examples:
             Send an event.
 
@@ -706,6 +733,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
         Raises:
             WebSocketNetworkError: A network error occured.
 
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
+
         Examples:
             Send a text message.
 
@@ -723,6 +755,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
 
         Raises:
             WebSocketNetworkError: A network error occured.
+
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
 
         Examples:
             Send a bytes message.
@@ -744,6 +781,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
 
         Raises:
             WebSocketNetworkError: A network error occured.
+
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
 
         Examples:
             Send JSON data.
@@ -779,6 +821,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             TimeoutError: No event was received before the timeout delay.
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
+
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
 
         Examples:
             Wait for an event until one is available.
@@ -823,6 +870,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event was not a text message.
 
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
+
         Examples:
             Wait for text until available.
 
@@ -862,6 +914,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             WebSocketDisconnect: The server closed the websocket.
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event was not a bytes message.
+
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
 
         Examples:
             Wait for bytes until available.
@@ -909,6 +966,11 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             WebSocketNetworkError: A network error occured.
             WebSocketInvalidTypeReceived: The received event
                 didn't correspond to the specified mode.
+
+        Note:
+            Exceptions not caught inside the context manager will be
+            wrapped in an [ExceptionGroup][ExceptionGroup]. Use `except*` to catch them
+            outside the `async with` block.
 
         Examples:
             Wait for data until available.
@@ -1302,7 +1364,7 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
             Maximum delay the client will wait for an answer to its Ping event.
             If the delay is exceeded,
             [WebSocketNetworkError][httpx_ws.WebSocketNetworkError]
-            will be raised and the connection closed.
+            will be raised in an [ExceptionGroup][ExceptionGroup] and the connection closed.
             Defaults to 20 seconds.
         session_class:
             The session class to use.
@@ -1427,7 +1489,7 @@ async def aconnect_ws(
             Maximum delay the client will wait for an answer to its Ping event.
             If the delay is exceeded,
             [WebSocketNetworkError][httpx_ws.WebSocketNetworkError]
-            will be raised and the connection closed.
+            will be raised in an [ExceptionGroup][ExceptionGroup] and the connection closed.
             Defaults to 20 seconds.
         subprotocols:
             Optional list of subprotocols to negotiate with the server.
