@@ -13,7 +13,12 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route, WebSocketRoute
 from starlette.websockets import WebSocket
 
-from httpx_ws import WebSocketDisconnect, WebSocketUpgradeError, aconnect_ws
+from httpx_ws import (
+    AsyncWebSocketSession,
+    WebSocketDisconnect,
+    WebSocketUpgradeError,
+    aconnect_ws,
+)
 from httpx_ws.transport import (
     ASGIWebSocketAsyncNetworkStream,
     ASGIWebSocketTransport,
@@ -360,6 +365,33 @@ async def test_cancel_scope_integrity():
         with CancelScope():
             async with aconnect_ws("ws://localhost:8000/ws", client):
                 pass
+
+
+@pytest.mark.anyio
+async def test_close_session_from_another_task():
+    async def app(scope, receive, send):
+        await receive()
+        await send({"type": "websocket.accept"})
+        await receive()
+
+    exit_requested = anyio.Event()
+
+    async with httpx.AsyncClient(
+        transport=ASGIWebSocketTransport(app), base_url="http://test"
+    ) as client:
+
+        async def connection(
+            *, task_status: anyio.abc.TaskStatus[AsyncWebSocketSession]
+        ) -> None:
+            async with aconnect_ws("/ws", client) as websocket:
+                task_status.started(websocket)
+                await exit_requested.wait()
+
+        async with create_task_group() as task_group:
+            websocket = await task_group.start(connection)
+            await websocket.close()
+            await anyio.sleep(0)
+            exit_requested.set()
 
 
 @pytest.mark.anyio

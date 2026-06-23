@@ -107,7 +107,13 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         return await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
-        message: Message = await self.receive(timeout=timeout)
+        try:
+            message: Message = await self.receive(timeout=timeout)
+        except anyio.EndOfStream:
+            # HTTP Core maps AnyIO's closed-stream signal to b"" at the
+            # AsyncNetworkStream boundary:
+            # https://github.com/encode/httpcore/blob/10a658221deb38a4c5b16db55ab554b0bf731707/httpcore/_backends/anyio.py#L25-L37
+            return b""
         type = message["type"]
 
         if type not in {"websocket.send", "websocket.close"}:
