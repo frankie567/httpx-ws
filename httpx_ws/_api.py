@@ -4,6 +4,7 @@ import contextlib
 import json
 import queue
 import secrets
+import socket
 import threading
 import typing
 
@@ -36,6 +37,7 @@ DEFAULT_MAX_MESSAGE_SIZE_BYTES = 65_536
 DEFAULT_QUEUE_SIZE = 512
 DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS = 20.0
 DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS = 20.0
+CLOSE_JOIN_TIMEOUT_SECONDS = 5.0
 
 
 class ShouldClose(Exception):
@@ -89,6 +91,8 @@ class WebSocketSession:
         self._write_lock: threading.Lock = threading.Lock()
         self._should_close_task: concurrent.futures.Future[bool] | None = None
         self._executor: concurrent.futures.ThreadPoolExecutor | None = None
+        self._read_task: concurrent.futures.Future[bytes] | None = None
+        self._background_receive_task: threading.Thread | None = None
 
         self._max_message_size_bytes = max_message_size_bytes
         self._queue_size = queue_size
@@ -127,7 +131,8 @@ class WebSocketSession:
 
     def __exit__(self, exc_type, exc, tb):
         self.close()
-        self._background_receive_task.join()
+        if self._background_receive_task is not None:
+            self._background_receive_task.join()
         if self._background_keepalive_ping_task is not None:
             self._background_keepalive_ping_task.join()
 
@@ -461,7 +466,26 @@ class WebSocketSession:
                     self.stream.write(data)
             except httpcore.WriteError:
                 pass
+        self._shutdown_socket()
+        self._join_background_receive()
         self.stream.close()
+
+    def _shutdown_socket(self) -> None:
+        sock = self.stream.get_extra_info("socket")
+        if sock is None:
+            return
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+
+    def _join_background_receive(self) -> None:
+        if threading.current_thread() is self._background_receive_task:
+            return
+        if self._background_receive_task is not None:
+            self._background_receive_task.join(CLOSE_JOIN_TIMEOUT_SECONDS)
+        if self._read_task is not None:
+            concurrent.futures.wait((self._read_task,), CLOSE_JOIN_TIMEOUT_SECONDS)
 
     def _background_receive(self, max_bytes: int) -> None:
         """
@@ -480,7 +504,8 @@ class WebSocketSession:
         partial_message_buffer: str | bytes | None = None
         try:
             while not self._should_close.is_set():
-                data = self._wait_until_closed(self._read_stream, max_bytes)
+                self._read_task = self._submit(self._read_stream, max_bytes)
+                data = self._wait_until_closed(self._read_task)
                 self.connection.receive_data(data)
                 for event in self.connection.events():
                     if isinstance(event, wsproto.events.Ping):
@@ -525,14 +550,14 @@ class WebSocketSession:
         try:
             while not self._should_close.is_set():
                 should_close = self._wait_until_closed(
-                    self._should_close.wait, interval_seconds
+                    self._submit(self._should_close.wait, interval_seconds)
                 )
                 if should_close:
                     raise ShouldClose()
                 pong_callback = self.ping()
                 if timeout_seconds is not None:
                     acknowledged = self._wait_until_closed(
-                        pong_callback.wait, timeout_seconds
+                        self._submit(pong_callback.wait, timeout_seconds)
                     )
                     if not acknowledged:
                         self.close(CloseReason.INTERNAL_ERROR, "Keepalive ping timeout")
@@ -540,24 +565,27 @@ class WebSocketSession:
         except ShouldClose:
             pass
 
-    def _wait_until_closed(
+    def _submit(
         self, callable: typing.Callable[..., TaskResult], *args, **kwargs
-    ) -> TaskResult:
+    ) -> "concurrent.futures.Future[TaskResult]":
         try:
-            executor, should_close_task = self._get_executor_should_close_task()
-            todo_task = executor.submit(callable, *args, **kwargs)
+            executor, _ = self._get_executor_should_close_task()
+            return executor.submit(callable, *args, **kwargs)
         except RuntimeError as e:
             raise ShouldClose() from e
-        else:
-            done, _ = concurrent.futures.wait(
-                (todo_task, should_close_task),  # type: ignore[misc]
-                return_when=concurrent.futures.FIRST_COMPLETED,
-            )
-            if should_close_task in done:
-                raise ShouldClose()
-            assert todo_task in done
-            result = todo_task.result()
-        return result
+
+    def _wait_until_closed(
+        self, todo_task: "concurrent.futures.Future[TaskResult]"
+    ) -> TaskResult:
+        _, should_close_task = self._get_executor_should_close_task()
+        done, _ = concurrent.futures.wait(
+            (todo_task, should_close_task),  # type: ignore[misc]
+            return_when=concurrent.futures.FIRST_COMPLETED,
+        )
+        if should_close_task in done:
+            raise ShouldClose()
+        assert todo_task in done
+        return todo_task.result()
 
     def _read_stream(self, max_bytes: int) -> bytes:
         data = self.stream.read(max_bytes)

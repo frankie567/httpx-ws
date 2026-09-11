@@ -1,5 +1,6 @@
 import concurrent.futures
 import queue
+import socket
 import threading
 import time
 from unittest.mock import MagicMock, call, patch
@@ -10,6 +11,7 @@ import httpx
 import pytest
 import wsproto
 from httpcore import AsyncNetworkStream, NetworkStream
+from httpcore._backends.sync import SyncStream
 from starlette.websockets import WebSocket
 from starlette.websockets import WebSocketDisconnect as StarletteWebSocketDisconnect
 
@@ -888,6 +890,51 @@ async def test_threads_wont_hang(server_factory: ServerFactoryFixture) -> None:
             time.sleep(0.1)
             final_threads_count = threading.active_count()
             assert initial_threads_count == final_threads_count
+
+
+def test_close_joins_reader_before_closing_stream() -> None:
+    """
+    Check that close() unblocks and joins the background reader before releasing
+    the socket, so a stale read cannot land on a file descriptor reused by the
+    next connection.
+    """
+    client_socket, server_socket = socket.socketpair()
+    server_socket.settimeout(1)
+    stream = SyncStream(client_socket)
+    with patch("threading.excepthook") as excepthook:
+        with WebSocketSession(stream, keepalive_ping_interval_seconds=None) as ws:
+            deadline = time.monotonic() + 1
+            while ws._read_task is None and time.monotonic() < deadline:
+                time.sleep(0.01)
+            assert ws._read_task is not None
+
+            ws.close()
+
+            assert ws._background_receive_task is not None
+            assert not ws._background_receive_task.is_alive()
+            assert ws._read_task.done()
+            assert client_socket.fileno() == -1
+
+        server_connection = wsproto.connection.Connection(
+            wsproto.connection.ConnectionType.SERVER
+        )
+        server_connection.receive_data(server_socket.recv(1024))
+        events = list(server_connection.events())
+        assert len(events) == 1
+        assert isinstance(events[0], wsproto.events.CloseConnection)
+        assert server_socket.recv(1024) == b""
+        with pytest.raises(OSError):
+            server_socket.send(b"late data")
+
+        new_client_socket, new_server_socket = socket.socketpair()
+        new_client_socket.settimeout(1)
+        new_server_socket.send(b"new connection")
+        assert new_client_socket.recv(1024) == b"new connection"
+
+    excepthook.assert_not_called()
+    server_socket.close()
+    new_client_socket.close()
+    new_server_socket.close()
 
 
 @pytest.mark.anyio
