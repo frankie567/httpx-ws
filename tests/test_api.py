@@ -569,6 +569,93 @@ class TestReceivePing:
         ]
 
 
+@pytest.fixture
+def pong_stream(pong_payloads, coalesced):
+    class MockNetworkStream(NetworkStream):
+        def __init__(self) -> None:
+            self.connection = wsproto.connection.Connection(
+                wsproto.connection.ConnectionType.SERVER
+            )
+            events = [
+                *(wsproto.events.Pong(payload) for payload in pong_payloads),
+                wsproto.events.TextMessage("STILL_CONNECTED"),
+                wsproto.events.CloseConnection(1000),
+            ]
+            self.chunks = [self.connection.send(event) for event in events]
+            if coalesced:
+                self.chunks = [b"".join(self.chunks)]
+
+        def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
+            try:
+                return self.chunks.pop(0)
+            except IndexError:
+                raise httpcore.ReadError()
+
+        def write(self, buffer: bytes, timeout: float | None = None) -> None:
+            self.connection.receive_data(buffer)
+
+        def close(self) -> None:
+            pass
+
+    return MockNetworkStream()
+
+
+@pytest.mark.parametrize("coalesced", [False, True])
+@pytest.mark.parametrize(
+    "pong_payloads",
+    [
+        (b"",),
+        (b"SERVER_HEARTBEAT",),
+        (b"CLIENT_PING", b"CLIENT_PING"),
+        (b"SERVER_HEARTBEAT", b"CLIENT_PING"),
+    ],
+    ids=["empty", "unsolicited", "duplicate", "unmatched_then_matched"],
+)
+class TestReceivePong:
+    def test_receive_pong(self, pong_stream, pong_payloads):
+        session = WebSocketSession(pong_stream, keepalive_ping_interval_seconds=None)
+        callback = session.ping(b"CLIENT_PING")
+        with session:
+            assert session.receive_text(timeout=1.0) == "STILL_CONNECTED"
+            assert callback.is_set() == (b"CLIENT_PING" in pong_payloads)
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                session.receive(timeout=1.0)
+            assert excinfo.value.code == 1000
+
+        assert list(pong_stream.connection.events()) == [
+            wsproto.events.Ping(b"CLIENT_PING"),
+            wsproto.events.CloseConnection(1000, ""),
+        ]
+
+    @pytest.mark.anyio
+    async def test_async_receive_pong(self, pong_stream, pong_payloads):
+        class MockAsyncNetworkStream(AsyncNetworkStream):
+            async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
+                return pong_stream.read(max_bytes, timeout)
+
+            async def write(self, buffer: bytes, timeout: float | None = None) -> None:
+                pong_stream.write(buffer, timeout)
+
+            async def aclose(self) -> None:
+                pong_stream.close()
+
+        session = AsyncWebSocketSession(
+            MockAsyncNetworkStream(), keepalive_ping_interval_seconds=None
+        )
+        callback = await session.ping(b"CLIENT_PING")
+        async with session:
+            assert await session.receive_text(timeout=1.0) == "STILL_CONNECTED"
+            assert callback.is_set() == (b"CLIENT_PING" in pong_payloads)
+            with pytest.raises(WebSocketDisconnect) as excinfo:
+                await session.receive(timeout=1.0)
+            assert excinfo.value.code == 1000
+
+        assert list(pong_stream.connection.events()) == [
+            wsproto.events.Ping(b"CLIENT_PING"),
+            wsproto.events.CloseConnection(1000, ""),
+        ]
+
+
 @pytest.mark.anyio
 class TestKeepalivePing:
     async def test_keepalive_ping(self):
