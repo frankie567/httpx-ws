@@ -5,7 +5,9 @@ import json
 import queue
 import secrets
 import threading
+import time
 import typing
+from collections import deque
 
 import anyio
 import httpcore
@@ -46,6 +48,51 @@ class EndOfStream(Exception):
     pass
 
 
+class _SyncEventQueue:
+    def __init__(self, maxsize: int) -> None:
+        self._maxsize = maxsize
+        self._items: deque[wsproto.events.Event | HTTPXWSException] = deque()
+        self._condition = threading.Condition()
+        self._terminal_event: wsproto.events.Event | HTTPXWSException | None = None
+
+    def put(self, event: wsproto.events.Event | HTTPXWSException) -> None:
+        with self._condition:
+            while (
+                self._maxsize > 0
+                and len(self._items) >= self._maxsize
+                and self._terminal_event is None
+            ):
+                self._condition.wait()
+            if self._terminal_event is None:
+                self._items.append(event)
+                self._condition.notify_all()
+
+    def get(
+        self, timeout: float | None = None
+    ) -> wsproto.events.Event | HTTPXWSException:
+        if timeout is not None and timeout < 0:
+            raise ValueError("'timeout' must be a non-negative number")
+        deadline = None if timeout is None else time.monotonic() + timeout
+        with self._condition:
+            while not self._items and self._terminal_event is None:
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    raise queue.Empty()
+                self._condition.wait(remaining)
+            if self._items:
+                event = self._items.popleft()
+                self._condition.notify_all()
+                return event
+            assert self._terminal_event is not None
+            return self._terminal_event
+
+    def close(self, event: wsproto.events.Event | HTTPXWSException) -> None:
+        with self._condition:
+            if self._terminal_event is None:
+                self._terminal_event = event
+            self._condition.notify_all()
+
+
 class WebSocketSession:
     """
     Sync context manager representing an opened WebSocket session.
@@ -80,9 +127,7 @@ class WebSocketSession:
         else:
             self.subprotocol = None
 
-        self._events: queue.Queue[wsproto.events.Event | HTTPXWSException] = (
-            queue.Queue(queue_size)
-        )
+        self._events = _SyncEventQueue(queue_size)
 
         self._ping_manager = PingManager()
         self._should_close = threading.Event()
@@ -183,6 +228,7 @@ class WebSocketSession:
             with self._write_lock:
                 self.stream.write(data)
         except httpcore.WriteError as e:
+            self._events.close(WebSocketNetworkError())
             self.close(CloseReason.INTERNAL_ERROR, "Stream write error")
             raise WebSocketNetworkError() from e
 
@@ -288,7 +334,7 @@ class WebSocketSession:
                     print("Connection closed")
         """
         try:
-            event = self._events.get(block=True, timeout=timeout)
+            event = self._events.get(timeout=timeout)
         except queue.Empty as e:
             raise TimeoutError from e
         if isinstance(event, HTTPXWSException):
@@ -434,6 +480,10 @@ class WebSocketSession:
         Internally, it'll send the
         [CloseConnection][wsproto.events.CloseConnection] event.
 
+        Pending and subsequent receive calls raise
+        [WebSocketDisconnect][httpx_ws.WebSocketDisconnect] once already queued
+        events have been consumed.
+
         *This method is automatically called when exiting the context manager.*
 
         Args:
@@ -447,6 +497,7 @@ class WebSocketSession:
 
                 ws.close()
         """
+        self._events.close(wsproto.events.CloseConnection(code, reason))
         self._should_close.set()
         if self._executor is not None:
             self._executor.shutdown(False)
@@ -492,7 +543,9 @@ class WebSocketSession:
                         self._ping_manager.ack(event.payload)
                         continue
                     if isinstance(event, wsproto.events.CloseConnection):
+                        self._events.close(event)
                         self._should_close.set()
+                        continue
                     if isinstance(event, wsproto.events.Message):
                         # Unfinished message: bufferize
                         if not event.message_finished:
@@ -514,8 +567,8 @@ class WebSocketSession:
                         continue
                     self._events.put(event)
         except (httpcore.ReadError, httpcore.WriteError, EndOfStream):
+            self._events.close(WebSocketNetworkError())
             self.close(CloseReason.INTERNAL_ERROR, "Stream error")
-            self._events.put(WebSocketNetworkError())
         except ShouldClose:
             pass
 
@@ -535,8 +588,8 @@ class WebSocketSession:
                         pong_callback.wait, timeout_seconds
                     )
                     if not acknowledged:
+                        self._events.close(WebSocketNetworkError())
                         self.close(CloseReason.INTERNAL_ERROR, "Keepalive ping timeout")
-                        self._events.put(WebSocketNetworkError())
         except ShouldClose:
             pass
 

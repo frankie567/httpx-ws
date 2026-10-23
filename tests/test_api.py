@@ -740,6 +740,101 @@ async def test_ping_pong(server_factory: ServerFactoryFixture):
                 assert aping_callback.is_set()
 
 
+def test_local_close_unblocks_all_receive_methods():
+    class IdleStream(NetworkStream):
+        def __init__(self):
+            self.closed = threading.Event()
+
+        def read(self, max_bytes, timeout=None):
+            self.closed.wait()
+            return b""
+
+        def write(self, buffer, timeout=None):
+            pass
+
+        def close(self):
+            self.closed.set()
+
+    with WebSocketSession(
+        IdleStream(), keepalive_ping_interval_seconds=None
+    ) as websocket_session:
+        ready = threading.Barrier(5)
+        errors = queue.Queue()
+
+        def receive(method):
+            ready.wait(timeout=5)
+            try:
+                getattr(websocket_session, method)()
+            except Exception as error:
+                errors.put(error)
+
+        readers = [
+            threading.Thread(target=receive, args=(method,), daemon=True)
+            for method in ("receive", "receive_text", "receive_bytes", "receive_json")
+        ]
+        for reader in readers:
+            reader.start()
+        ready.wait(timeout=5)
+        websocket_session.close(code=1001, reason="client stopped")
+        try:
+            for reader in readers:
+                reader.join(timeout=1)
+            assert not any(reader.is_alive() for reader in readers)
+            for _ in readers:
+                error = errors.get_nowait()
+                assert isinstance(error, WebSocketDisconnect)
+                assert error.code == 1001
+                assert error.reason == "client stopped"
+            with pytest.raises(WebSocketDisconnect) as exc:
+                websocket_session.receive(timeout=0)
+            assert exc.value.code == 1001
+        finally:
+            for reader in readers:
+                if reader.is_alive():
+                    websocket_session._events.put(wsproto.events.CloseConnection(1001))
+            for reader in readers:
+                reader.join(timeout=1)
+
+
+def test_local_close_preserves_buffered_messages_with_a_full_queue():
+    class BufferedStream(NetworkStream):
+        def __init__(self):
+            self.connection = wsproto.connection.Connection(
+                wsproto.ConnectionType.SERVER
+            )
+            self.read_count = 0
+            self.second_read = threading.Event()
+            self.closed = threading.Event()
+
+        def read(self, max_bytes, timeout=None):
+            self.read_count += 1
+            if self.read_count == 1:
+                return self.connection.send(wsproto.events.TextMessage("buffered"))
+            if self.read_count == 2:
+                self.second_read.set()
+                return self.connection.send(wsproto.events.TextMessage("blocked"))
+            self.closed.wait()
+            return b""
+
+        def write(self, buffer, timeout=None):
+            pass
+
+        def close(self):
+            self.closed.set()
+
+    stream = BufferedStream()
+    with WebSocketSession(
+        stream, queue_size=1, keepalive_ping_interval_seconds=None
+    ) as websocket_session:
+        assert stream.second_read.wait(timeout=5)
+        websocket_session.close(code=1001, reason="client stopped")
+        assert websocket_session.receive_text(timeout=0) == "buffered"
+        with pytest.raises(WebSocketDisconnect) as exc:
+            websocket_session.receive(timeout=0)
+        assert exc.value.code == 1001
+        assert exc.value.reason == "client stopped"
+
+
 @pytest.mark.anyio
 async def test_send_close(
     server_factory: ServerFactoryFixture, on_receive_message: MagicMock
