@@ -1142,8 +1142,10 @@ class WebSocketClient(typing.Generic[SyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
-            Defaults to 65 KiB.
+            Read chunk size passed to the transport, in bytes.
+            Larger messages are reassembled and delivered in full; this does not
+            limit the size of a complete WebSocket message.
+            Defaults to 65,536 bytes (64 KiB).
         queue_size:
             Size of the queue where the received messages will be held
             until they are consumed.
@@ -1266,8 +1268,10 @@ def connect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
-            Defaults to 65 KiB.
+            Read chunk size passed to the transport, in bytes.
+            Larger messages are reassembled and delivered in full; this does not
+            limit the size of a complete WebSocket message.
+            Defaults to 65,536 bytes (64 KiB).
         queue_size:
             Size of the queue where the received messages will be held
             until they are consumed.
@@ -1351,8 +1355,10 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
-            Defaults to 65 KiB.
+            Read chunk size passed to the transport, in bytes.
+            Larger messages are reassembled and delivered in full; this does not
+            limit the size of a complete WebSocket message.
+            Defaults to 65,536 bytes (64 KiB).
         queue_size:
             Size of the queue where the received messages will be held
             until they are consumed.
@@ -1476,8 +1482,10 @@ async def aconnect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
-            Defaults to 65 KiB.
+            Read chunk size passed to the transport, in bytes.
+            Larger messages are reassembled and delivered in full; this does not
+            limit the size of a complete WebSocket message.
+            Defaults to 65,536 bytes (64 KiB).
         queue_size:
             Size of the queue where the received messages will be held
             until they are consumed.

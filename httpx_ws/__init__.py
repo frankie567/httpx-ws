@@ -1,3 +1,4 @@
+import utils.session
 __version__ = "0.9.0"
 
 from ._api import (
