@@ -104,6 +104,58 @@ class TestASGIWebSocketAsyncNetworkStream:
                 ping_event = wsproto.events.Ping(b"PING")
                 await stream.write(connection.send(ping_event))
 
+    @pytest.mark.parametrize("binary", [False, True])
+    @pytest.mark.parametrize("chunk_size", [1, 4096])
+    @pytest.mark.parametrize("empty_first_fragment", [False, True])
+    async def test_write_fragmented_messages(
+        self, scope: Scope, binary: bool, chunk_size: int, empty_first_fragment: bool
+    ):
+        received_messages = []
+        finished = anyio.Event()
+
+        async def app(scope, receive, send):
+            await receive()
+            await send({"type": "websocket.accept"})
+            while True:
+                message = await receive()
+                if message["type"] == "websocket.disconnect":
+                    finished.set()
+                    return
+                received_messages.append(message)
+
+        event_type = (
+            wsproto.events.BytesMessage if binary else wsproto.events.TextMessage
+        )
+        fragments = ["", "안녕", "🌍"] if empty_first_fragment else ["안", "녕", "🌍"]
+        if binary:
+            fragments = [fragment.encode("utf-8") for fragment in fragments]
+        key = "bytes" if binary else "text"
+        expected = b"".join(fragments) if binary else "".join(fragments)
+        empty = b"" if binary else ""
+        connection = wsproto.connection.Connection(wsproto.connection.CLIENT)
+        async with (
+            create_task_group() as tg,
+            ASGIWebSocketAsyncNetworkStream(app, scope, tg) as (stream, _),
+        ):
+            events = [
+                event_type(fragment, message_finished=index == len(fragments) - 1)
+                for index, fragment in enumerate(fragments)
+            ]
+            events.extend([event_type(empty), event_type(expected)])
+            for event in events:
+                data = connection.send(event)
+                for offset in range(0, len(data), chunk_size):
+                    await stream.write(data[offset : offset + chunk_size])
+            await stream.write(connection.send(wsproto.events.CloseConnection(1000)))
+            with anyio.fail_after(1):
+                await finished.wait()
+
+        assert received_messages == [
+            {"type": "websocket.receive", key: expected},
+            {"type": "websocket.receive", key: empty},
+            {"type": "websocket.receive", key: expected},
+        ]
+
     async def test_read(self, scope):
         async def app(scope, receive, send):
             await send({"type": "websocket.accept"})
@@ -341,6 +393,30 @@ async def test_keepalive_ping_disabled():
     async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
         async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
             assert ws._keepalive_ping_interval_seconds is None
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("mode", ["text", "binary"])
+async def test_receive_fragmented_json(mode):
+    async def websocket_endpoint(websocket: WebSocket):
+        await websocket.accept()
+        message = await websocket.receive_json(mode=mode)
+        await websocket.send_json(message, mode=mode)
+        await websocket.close()
+
+    app = Starlette(routes=[WebSocketRoute("/ws", endpoint=websocket_endpoint)])
+    event_type = (
+        wsproto.events.TextMessage if mode == "text" else wsproto.events.BytesMessage
+    )
+    fragments = ['{"message":', ' "안녕🌍"}']
+    if mode == "binary":
+        fragments = [fragment.encode("utf-8") for fragment in fragments]
+    with anyio.fail_after(1):
+        async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
+            async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
+                await ws.send(event_type(fragments[0], message_finished=False))
+                await ws.send(event_type(fragments[1]))
+                assert await ws.receive_json(mode=mode) == {"message": "안녕🌍"}
 
 
 @pytest.mark.anyio
