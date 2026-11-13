@@ -1,0 +1,21 @@
+pyproject.toml
+  s_8ed09f1b56b507::t_79343cf1ec1e46 24
+uv.lock
+  s_8ed09f1b56b507::t_01f0725137ec18 639
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b87552e5e4c92f3fd19e8339f45cb79d8644a85",
+  "prompts": {},
+  "sessions": {
+    "s_8ed09f1b56b507": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d669-edf6-74a1-bd75-07db8c008df3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
