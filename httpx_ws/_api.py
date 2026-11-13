@@ -587,7 +587,7 @@ class WebSocketSession:
             raise ShouldClose() from e
         else:
             done, _ = concurrent.futures.wait(
-                (todo_task, should_close_task),  # type: ignore[misc]
+                (todo_task, should_close_task),  # ty: ignore[invalid-argument-type]
                 return_when=concurrent.futures.FIRST_COMPLETED,
             )
             if should_close_task in done:
@@ -1227,7 +1227,7 @@ class WebSocketClient(typing.Generic[SyncSession]):
         | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
         keepalive_ping_timeout_seconds: float
         | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
+        session_class: type[SyncSession] = WebSocketSession,  # ty: ignore[invalid-parameter-default]
     ) -> None:
         self.client = client
         self.max_message_size_bytes = max_message_size_bytes
@@ -1303,7 +1303,7 @@ def connect_ws(
     keepalive_ping_timeout_seconds: float
     | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: list[str] | None = None,
-    session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
+    session_class: type[SyncSession] = WebSocketSession,  # ty: ignore[invalid-parameter-default]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
     """
@@ -1438,7 +1438,7 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
         | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
         keepalive_ping_timeout_seconds: float
         | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
+        session_class: type[AsyncSession] = AsyncWebSocketSession,  # ty: ignore[invalid-parameter-default]
     ) -> None:
         self.client = client
         self.max_message_size_bytes = max_message_size_bytes
@@ -1515,7 +1515,7 @@ async def aconnect_ws(
     keepalive_ping_timeout_seconds: float
     | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: list[str] | None = None,
-    session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
+    session_class: type[AsyncSession] = AsyncWebSocketSession,  # ty: ignore[invalid-parameter-default]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
     """

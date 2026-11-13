@@ -211,7 +211,7 @@ class ASGIWebSocketTransport(ASGITransport):
 
         return self
 
-    async def __aexit__(
+    async def __aexit__(  # ty: ignore[lost-keyword-for-regular-parameter]
         self,
         exc_type: type[BaseException] | None = None,
         exc_val: BaseException | None = None,
@@ -256,7 +256,7 @@ class ASGIWebSocketTransport(ASGITransport):
         ],
     ) -> None:
         stream = ASGIWebSocketAsyncNetworkStream(
-            self.app,  # type: ignore[arg-type]
+            self.app,  # ty: ignore[invalid-argument-type]
             self.scope,
             self._task_group,
             self._initial_receive_timeout,

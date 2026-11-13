@@ -98,7 +98,7 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# mkdocs documentation
+# Zensical documentation
 /site
 
 # mypy

@@ -1,0 +1,63 @@
+[project]
+site_name = "HTTPX WS"
+site_description = "WebSockets support for HTTPX"
+site_url = "https://frankie567.github.io/httpx-ws/"
+repo_url = "https://github.com/frankie567/httpx-ws"
+repo_name = "frankie567/httpx-ws"
+watch = ["httpx_ws"]
+nav = [
+    { "About" = "index.md" },
+    { "Usage" = [
+        { "Quickstart" = "usage/quickstart.md" },
+        { "Subprotocols" = "usage/subprotocols.md" },
+        { "Testing ASGI" = "usage/asgi.md" },
+        { "Class-based client" = "usage/class_based_client.md" },
+    ] },
+    { "Reference" = [{ "httpx_ws" = "reference/httpx_ws.md" }] },
+]
+
+[project.theme]
+favicon = "images/favicon.svg"
+features = ["navigation.tracking", "navigation.sections"]
+
+[project.theme.icon]
+logo = "octicons/arrow-switch-16"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "material/brightness-auto"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "deep orange"
+accent = "deep orange"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "deep orange"
+accent = "deep orange"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to system preference"
+
+[project.markdown_extensions]
+toc.permalink = true
+"pymdownx.highlight".anchor_linenums = true
+"pymdownx.tasklist".custom_checkbox = true
+"pymdownx.inlinehilite" = {}
+"pymdownx.snippets" = {}
+"pymdownx.superfences" = {}
+
+[project.plugins.mkdocstrings.handlers.python]
+paths = ["."]
+inventories = [
+    "https://docs.python.org/3.11/objects.inv",
+    "https://python-hyper.org/projects/wsproto/en/stable/objects.inv",
+]
+
+[project.plugins.mkdocstrings.handlers.python.options]
+docstring_style = "google"

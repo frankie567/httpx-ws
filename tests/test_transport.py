@@ -199,9 +199,10 @@ class TestASGIWebSocketAsyncNetworkStream:
                 ASGIWebSocketAsyncNetworkStream(app, scope, tg),
             ):
                 pass
-        assert excinfo.group_contains(WebSocketUpgradeError)
-        assert excinfo.value.exceptions[0].response.status_code == 401
-        assert excinfo.value.exceptions[0].response.content == b"Unauthorized"
+        error = excinfo.value.exceptions[0]
+        assert isinstance(error, WebSocketUpgradeError)
+        assert error.response.status_code == 401
+        assert error.response.content == b"Unauthorized"
 
     async def test_exception(self, scope):
         async def app(scope, receive, send):
@@ -213,9 +214,10 @@ class TestASGIWebSocketAsyncNetworkStream:
                 ASGIWebSocketAsyncNetworkStream(app, scope, tg),
             ):
                 pass
-        assert excinfo.group_contains(WebSocketDisconnect)
-        assert excinfo.value.exceptions[0].code == 1011
-        assert excinfo.value.exceptions[0].reason == "Error"
+        error = excinfo.value.exceptions[0]
+        assert isinstance(error, WebSocketDisconnect)
+        assert error.code == 1011
+        assert error.reason == "Error"
 
     async def test_never_accepts(self, scope: Scope):
         async def app(scope, receive, send):

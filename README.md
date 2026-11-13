@@ -83,6 +83,8 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 We use [uv](https://docs.astral.sh/uv/) to manage the development environment and production build, and [just](https://github.com/casey/just) to manage command shortcuts. Ensure they are installed on your system.
 
+Run `just install` to install the development dependencies and pre-commit hooks.
+
 ### Run unit tests
 
 You can run all the tests with:
@@ -98,6 +100,21 @@ Execute the following command to apply linting and check typing:
 ```bash
 just lint
 ```
+
+### Documentation
+
+Use `just docs-serve` to preview the Zensical site and `just docs-build` to build it into `site/`.
+
+### Publishing a release
+
+Commit the release entries under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
+From a clean checkout with Git signing configured, run `just version patch`,
+`just version minor`, or `just version major`. The recipe updates the version,
+changelog, and lockfile, then creates a signed commit and tag.
+
+Review the commit and preview the release body with `just release-notes <version>`.
+Push the commit and tag to publish to PyPI and create a draft GitHub release.
+The PyPI Trusted Publisher must match `build.yml` and the GitHub `release` environment.
 
 ## License
 
