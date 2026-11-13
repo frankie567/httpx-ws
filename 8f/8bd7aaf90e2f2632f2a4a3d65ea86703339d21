@@ -1,0 +1,23 @@
+httpx_ws/transport.py
+  s_8ed09f1b56b507::t_d556fb4aa7a850 9,111-116
+tests/test_transport.py
+  s_8ed09f1b56b507::t_597272d3aa4208 141,149-152,160-161
+  s_8ed09f1b56b507::t_d556fb4aa7a850 6,16-21,25,27,135-140,142-148,153-159,424-451
+  s_8ed09f1b56b507::t_9d19b52dd89061 162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f8bd7aaf90e2f2632f2a4a3d65ea86703339d21",
+  "prompts": {},
+  "sessions": {
+    "s_8ed09f1b56b507": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d669-edf6-74a1-bd75-07db8c008df3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
