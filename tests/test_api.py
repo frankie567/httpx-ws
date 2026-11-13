@@ -666,6 +666,41 @@ class TestKeepalivePing:
         assert stream.ping_received >= 1
         assert stream.ping_answered >= 1
 
+    def test_keepalive_ping_exits_when_closing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        read_started = threading.Event()
+        closed = threading.Event()
+        writes: list[bytes] = []
+
+        class MockNetworkStream(NetworkStream):
+            def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
+                read_started.set()
+                assert closed.wait(5)
+                return b""
+
+            def write(self, buffer: bytes, timeout: float | None = None) -> None:
+                writes.append(buffer)
+
+            def close(self) -> None:
+                closed.set()
+
+        session = WebSocketSession(
+            MockNetworkStream(), keepalive_ping_interval_seconds=0
+        )
+        ping = session.ping
+
+        def ping_while_closing(payload: bytes = b"") -> threading.Event:
+            assert read_started.wait(5)
+            session.close()
+            return ping(payload)
+
+        monkeypatch.setattr(session, "ping", ping_while_closing)
+        with session:
+            assert closed.wait(5)
+
+        assert len(writes) == 1
+
     async def test_keepalive_ping_timeout(self):
         class MockNetworkStream(NetworkStream):
             def __init__(self) -> None:

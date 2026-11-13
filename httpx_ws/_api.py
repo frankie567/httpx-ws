@@ -529,7 +529,10 @@ class WebSocketSession:
                 )
                 if should_close:
                     raise ShouldClose()
-                pong_callback = self.ping()
+                try:
+                    pong_callback = self.ping()
+                except wsproto.utilities.LocalProtocolError:
+                    return
                 if timeout_seconds is not None:
                     acknowledged = self._wait_until_closed(
                         pong_callback.wait, timeout_seconds
