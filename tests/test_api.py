@@ -372,15 +372,17 @@ class TestReceive:
                 assert isinstance(event, wsproto.events.TextMessage)
                 assert event.data == "SERVER_MESSAGE"
 
+    @pytest.mark.parametrize("limit", [1024, 4096])
     @pytest.mark.parametrize(
         "full_message,send_method",
         [
             pytest.param(b"A" * 1024 * 4, "send_bytes", id="bytes"),
-            pytest.param("A" * 1024 * 4, "send_text", id="text"),
+            pytest.param("é" * 2048, "send_text", id="utf8-text"),
         ],
     )
-    async def test_receive_oversized_message(
+    async def test_receive_message_size_limit(
         self,
+        limit: int,
         full_message: str | bytes,
         send_method: str,
         server_factory: ServerFactoryFixture,
@@ -397,24 +399,34 @@ class TestReceive:
             with (
                 httpx.Client(transport=httpx.HTTPTransport(uds=socket)) as client,
                 connect_ws(
-                    "http://socket/ws", client, max_message_size_bytes=1024
+                    "http://socket/ws", client, max_message_size_bytes=limit
                 ) as ws,
             ):
-                event = ws.receive()
-                assert isinstance(event, wsproto.events.Message)
-                assert event.data == full_message
+                if limit == 1024:
+                    with pytest.raises(WebSocketDisconnect) as excinfo:
+                        ws.receive(timeout=1)
+                    assert excinfo.value.code == 1009
+                else:
+                    event = ws.receive(timeout=1)
+                    assert isinstance(event, wsproto.events.Message)
+                    assert event.data == full_message
 
             async with (
                 httpx.AsyncClient(
                     transport=httpx.AsyncHTTPTransport(uds=socket)
                 ) as aclient,
                 aconnect_ws(
-                    "http://socket/ws", aclient, max_message_size_bytes=1024
+                    "http://socket/ws", aclient, max_message_size_bytes=limit
                 ) as aws,
             ):
-                event = await aws.receive()
-                assert isinstance(event, wsproto.events.Message)
-                assert event.data == full_message
+                if limit == 1024:
+                    with pytest.raises(WebSocketDisconnect) as excinfo:
+                        await aws.receive(timeout=1)
+                    assert excinfo.value.code == 1009
+                else:
+                    event = await aws.receive(timeout=1)
+                    assert isinstance(event, wsproto.events.Message)
+                    assert event.data == full_message
 
     async def test_receive_text(self, server_factory: ServerFactoryFixture):
         async def websocket_endpoint(websocket: WebSocket):

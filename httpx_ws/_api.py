@@ -478,6 +478,7 @@ class WebSocketSession:
             max_bytes: The maximum chunk size to read at each iteration.
         """
         partial_message_buffer: str | bytes | None = None
+        partial_message_size = 0
         try:
             while not self._should_close.is_set():
                 data = self._wait_until_closed(self._read_stream, max_bytes)
@@ -494,6 +495,19 @@ class WebSocketSession:
                     if isinstance(event, wsproto.events.CloseConnection):
                         self._should_close.set()
                     if isinstance(event, wsproto.events.Message):
+                        payload = event.data
+                        partial_message_size += len(
+                            payload.encode() if isinstance(payload, str) else payload
+                        )
+                        if partial_message_size > max_bytes:
+                            disconnect = WebSocketDisconnect(
+                                CloseReason.MESSAGE_TOO_BIG, "Message too big"
+                            )
+                            self.close(disconnect.code, disconnect.reason)
+                            self._events.put(disconnect)
+                            return
+                        if event.message_finished:
+                            partial_message_size = 0
                         # Unfinished message: bufferize
                         if not event.message_finished:
                             if partial_message_buffer is None:
@@ -1052,6 +1066,7 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             max_bytes: The maximum chunk size to read at each iteration.
         """
         partial_message_buffer: str | bytes | None = None
+        partial_message_size = 0
         try:
             while not self._should_close.is_set():
                 data = await self._read_stream(max_bytes)
@@ -1068,6 +1083,19 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
                     if isinstance(event, wsproto.events.CloseConnection):
                         self._should_close.set()
                     if isinstance(event, wsproto.events.Message):
+                        payload = event.data
+                        partial_message_size += len(
+                            payload.encode() if isinstance(payload, str) else payload
+                        )
+                        if partial_message_size > max_bytes:
+                            disconnect = WebSocketDisconnect(
+                                CloseReason.MESSAGE_TOO_BIG, "Message too big"
+                            )
+                            await self.close(disconnect.code, disconnect.reason)
+                            await self._send_event.send(disconnect)
+                            return
+                        if event.message_finished:
+                            partial_message_size = 0
                         # Unfinished message: bufferize
                         if not event.message_finished:
                             if partial_message_buffer is None:
@@ -1145,7 +1173,8 @@ class WebSocketClient(typing.Generic[SyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1269,7 +1298,8 @@ def connect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1354,7 +1384,8 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1479,7 +1510,8 @@ async def aconnect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
