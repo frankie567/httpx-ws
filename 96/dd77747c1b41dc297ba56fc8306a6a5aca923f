@@ -1,0 +1,14 @@
+httpx_ws/__init__.py
+  h_868de2c7aaf22e 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "96dd77747c1b41dc297ba56fc8306a6a5aca923f",
+  "prompts": {},
+  "humans": {
+    "h_868de2c7aaf22e": {
+      "author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
