@@ -636,7 +636,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anyio", specifier = ">=4" },
+    { name = "anyio", specifier = ">=4.10.0" },
     { name = "httpcore", specifier = ">=1.0.4" },
     { name = "httpx", specifier = ">=0.23.1" },
     { name = "wsproto" },
