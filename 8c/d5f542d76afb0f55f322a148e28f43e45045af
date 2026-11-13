@@ -1,0 +1,68 @@
+docs/images/favicon.svg
+  s_c2115982418367::t_10487990b47cd4 1
+.github/workflows/dependency-review.yml
+  s_c2115982418367::t_f2d6e1066709a9 1-22
+.github/workflows/build.yml
+  s_c2115982418367::t_09b89717c75f2e 134-136
+  s_c2115982418367::t_283d7568ee7972 63
+  s_c2115982418367::t_f2d6e1066709a9 3-10,13-37,41,43,46-47,49-53,55,57,61,64-73,75-81,83-89,94-111,115-117,121,124-125,127-130,132-133,137-142,145-146,148,151-152
+  s_c2115982418367::t_07f13447a1af61 143-144
+  s_c2115982418367::t_efc616c9d1cc27 112
+README.md
+  s_c2115982418367::t_efc616c9d1cc27 118
+  s_c2115982418367::t_93740fbe810800 86-87,104-117
+zensical.toml
+  s_c2115982418367::t_10487990b47cd4 20
+  s_c2115982418367::t_ff4a6ebc20663a 1-19,21-63
+CHANGELOG.md
+  s_c2115982418367::t_fe0fa95860da71 17-21
+  s_c2115982418367::t_be8c78b2f4babb 11-16
+  s_c2115982418367::t_9054edad0c352d 8-10
+  s_c2115982418367::t_768984fba033d7 22-24
+  s_c2115982418367::t_4fb311bb0530b5 1-7,25-35
+.github/workflows/docs.yml
+  s_c2115982418367::t_283d7568ee7972 27
+  s_c2115982418367::t_f2d6e1066709a9 20-25,29,31,33,35,39,44-46,53-57,60
+.gitignore
+  s_c2115982418367::t_efc616c9d1cc27 101
+justfile
+  s_c2115982418367::t_efc616c9d1cc27 4-5,8-10,13-15,18,21,24,27-31,34-51
+.github/workflows/codeql.yml
+  s_c2115982418367::t_f2d6e1066709a9 1-41
+httpx_ws/_api.py
+  s_c2115982418367::t_8187ee54469493 590
+  s_c2115982418367::t_283d7568ee7972 1230,1306,1441,1518
+.github/workflows/scorecard.yml
+  s_c2115982418367::t_f2d6e1066709a9 1-49
+.github/dependabot.yml
+  s_c2115982418367::t_f2d6e1066709a9 3,6-21
+pyproject.toml
+  s_c2115982418367::t_efc616c9d1cc27 35,46,52-56
+tests/test_transport.py
+  s_c2115982418367::t_283d7568ee7972 202-205,217-220
+httpx_ws/transport.py
+  s_c2115982418367::t_283d7568ee7972 214
+  s_c2115982418367::t_8187ee54469493 259
+.github/workflows/copilot-setup-steps.yml
+  s_c2115982418367::t_f2d6e1066709a9 14-16,22-23,25-27,29,31,35
+.pre-commit-config.yaml
+  s_c2115982418367::t_0a19d2d1e9e858 1-28
+uv.lock
+  s_c2115982418367::t_2445de52046931 80-85,232-249,280-295,435-438,444,446,459-462,468,470-479,513-514,516-518,752-753,755-757,808-823,917-928,1061-1141,1159-1192,1284-1299,1566-1602
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8cd5f542d76afb0f55f322a148e28f43e45045af",
+  "prompts": {},
+  "sessions": {
+    "s_c2115982418367": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d67b-8360-71d1-b659-6fce74193372",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
