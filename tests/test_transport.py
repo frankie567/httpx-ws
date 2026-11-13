@@ -1,6 +1,5 @@
 import base64
 import secrets
-import sys
 from typing import Any
 
 import anyio
@@ -21,9 +20,6 @@ from httpx_ws.transport import (
     UnhandledASGIMessageType,
     UnhandledWebSocketEvent,
 )
-
-if sys.version_info < (3, 11):
-    from exceptiongroup import ExceptionGroup
 
 
 @pytest.fixture
@@ -173,7 +169,7 @@ class TestASGIWebSocketAsyncNetworkStream:
 
     async def test_exception(self, scope):
         async def app(scope, receive, send):
-            raise Exception("Error")
+            raise RuntimeError("Error")
 
         with pytest.raises(ExceptionGroup) as excinfo:
             async with (
@@ -202,7 +198,7 @@ class TestASGIWebSocketAsyncNetworkStream:
         async def app(scope, receive, send):
             await send({"type": "websocket.accept"})
             await receive()
-            raise Exception("App error")
+            raise RuntimeError("App error")
 
         async with (
             create_task_group() as tg,
@@ -317,12 +313,14 @@ async def test_subprotocol_support():
         ]
     )
 
-    async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
-        async with aconnect_ws(
+    async with (
+        httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client,
+        aconnect_ws(
             "ws://localhost:8000/ws", client, subprotocols=["custom_protocol"]
-        ) as ws:
-            await ws.receive_text()
-            assert ws.subprotocol == "custom_protocol"
+        ) as ws,
+    ):
+        await ws.receive_text()
+        assert ws.subprotocol == "custom_protocol"
 
 
 @pytest.mark.anyio
@@ -338,9 +336,11 @@ async def test_keepalive_ping_disabled():
         ]
     )
 
-    async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
-        async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
-            assert ws._keepalive_ping_interval_seconds is None
+    async with (
+        httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client,
+        aconnect_ws("ws://localhost:8000/ws", client) as ws,
+    ):
+        assert ws._keepalive_ping_interval_seconds is None
 
 
 @pytest.mark.anyio
@@ -377,9 +377,11 @@ async def test_receive():
         ]
     )
 
-    async with httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client:
-        async with aconnect_ws("ws://localhost:8000/ws", client) as ws:
-            await ws.send_text("RESULT")
+    async with (
+        httpx.AsyncClient(transport=ASGIWebSocketTransport(app)) as client,
+        aconnect_ws("ws://localhost:8000/ws", client) as ws,
+    ):
+        await ws.send_text("RESULT")
 
     assert len(messages) == 1
     assert messages[0] == "RESULT"

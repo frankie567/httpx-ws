@@ -106,7 +106,7 @@ class WebSocketSession:
         assert self._executor is not None
         return self._executor, self._should_close_task
 
-    def __enter__(self) -> "WebSocketSession":
+    def __enter__(self) -> typing.Self:
         self._background_receive_task = threading.Thread(
             target=self._background_receive, args=(self._max_message_size_bytes,)
         )
@@ -374,7 +374,7 @@ class WebSocketSession:
         """
         event = self.receive(timeout)
         if isinstance(event, wsproto.events.BytesMessage):
-            return event.data
+            return bytes(event.data)
         raise WebSocketInvalidTypeReceived(event)
 
     def receive_json(
@@ -942,7 +942,7 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
         """
         event = await self.receive(timeout)
         if isinstance(event, wsproto.events.BytesMessage):
-            return event.data
+            return bytes(event.data)
         raise WebSocketInvalidTypeReceived(event)
 
     async def receive_json(
@@ -1314,9 +1314,9 @@ def connect_ws(
                     ws.send_text("Hello!")
     """
     if client is None:
-        with httpx.Client() as client:
+        with httpx.Client() as default_client:
             ws_client = WebSocketClient(
-                client=client,
+                client=default_client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
@@ -1524,9 +1524,9 @@ async def aconnect_ws(
                     await ws.send_text("Hello!")
     """
     if client is None:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as default_client:
             ws_client = AsyncWebSocketClient(
-                client=client,
+                client=default_client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,

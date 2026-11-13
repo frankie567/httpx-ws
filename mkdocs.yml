@@ -54,7 +54,7 @@ plugins:
           handlers:
               python:
                   inventories:
-                      - https://docs.python.org/3.10/objects.inv
+                      - https://docs.python.org/3.11/objects.inv
                       - https://python-hyper.org/projects/wsproto/en/stable/objects.inv
                   options:
                       docstring_style: google
