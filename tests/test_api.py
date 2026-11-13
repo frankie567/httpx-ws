@@ -1,5 +1,6 @@
 import concurrent.futures
 import queue
+import sys
 import threading
 import time
 from unittest.mock import MagicMock, call, patch
@@ -1011,6 +1012,39 @@ async def test_threads_wont_hang(server_factory: ServerFactoryFixture) -> None:
         await anyio.sleep(0.1)
         final_threads_count = threading.active_count()
         assert initial_threads_count == final_threads_count
+
+
+def test_exit_with_full_queue():
+    class ObservedQueue(queue.Queue):
+        def put(self, item, *args, **kwargs):
+            if self.full():
+                queue_full.set()
+            super().put(item, *args, **kwargs)
+
+    queue_full = threading.Event()
+    connection = wsproto.connection.Connection(wsproto.ConnectionType.SERVER)
+    stream = MagicMock(spec=NetworkStream)
+    stream.read.return_value = b"".join(
+        connection.send(wsproto.events.TextMessage(str(index))) for index in range(2)
+    )
+    session = WebSocketSession(stream, keepalive_ping_interval_seconds=None)
+    session._events = ObservedQueue(maxsize=1)
+
+    def run_session():
+        with session:
+            assert queue_full.wait(5)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        exit_task = executor.submit(run_session)
+        try:
+            exit_task.result(timeout=10)
+        except TimeoutError:
+            session.receive(timeout=1)
+            pytest.fail("Exiting with a full event queue blocked")
+
+    if sys.version_info >= (3, 13):
+        with pytest.raises(WebSocketDisconnect):
+            session.receive(timeout=1)
 
 
 @pytest.mark.anyio

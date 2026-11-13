@@ -4,6 +4,7 @@ import contextlib
 import json
 import queue
 import secrets
+import sys
 import threading
 import typing
 
@@ -25,6 +26,14 @@ from ._exceptions import (
 )
 from ._ping import AsyncPingManager, PingManager
 from .transport import ASGIWebSocketAsyncNetworkStream
+
+if sys.version_info >= (3, 13):
+    from queue import ShutDown as QueueShutDown
+else:
+
+    class QueueShutDown(Exception):
+        pass
+
 
 JSONMode = typing.Literal["text", "binary"]
 TaskFunction = typing.TypeVar("TaskFunction")
@@ -127,9 +136,17 @@ class WebSocketSession:
 
     def __exit__(self, exc_type, exc, tb):
         self.close()
-        self._background_receive_task.join()
-        if self._background_keepalive_ping_task is not None:
-            self._background_keepalive_ping_task.join()
+        tasks = (self._background_receive_task, self._background_keepalive_ping_task)
+        if sys.version_info >= (3, 13):
+            self._events.shutdown(immediate=True)
+            for task in tasks:
+                if task is not None:
+                    task.join()
+        else:
+            for task in tasks:
+                while task is not None and task.is_alive():
+                    with contextlib.suppress(queue.Empty):
+                        self._events.get(timeout=0.01)
 
     def ping(self, payload: bytes = b"") -> threading.Event:
         """
@@ -291,6 +308,8 @@ class WebSocketSession:
             event = self._events.get(block=True, timeout=timeout)
         except queue.Empty as e:
             raise TimeoutError from e
+        except QueueShutDown as e:
+            raise WebSocketDisconnect() from e
         if isinstance(event, HTTPXWSException):
             raise event
         if isinstance(event, wsproto.events.CloseConnection):
@@ -529,8 +548,9 @@ class WebSocketSession:
                     self._events.put(event)
         except (httpcore.ReadError, httpcore.WriteError, EndOfStream):
             self.close(CloseReason.INTERNAL_ERROR, "Stream error")
-            self._events.put(WebSocketNetworkError())
-        except ShouldClose:
+            with contextlib.suppress(QueueShutDown):
+                self._events.put(WebSocketNetworkError())
+        except (ShouldClose, QueueShutDown):
             pass
 
     def _background_keepalive_ping(
@@ -554,7 +574,7 @@ class WebSocketSession:
                     if not acknowledged:
                         self.close(CloseReason.INTERNAL_ERROR, "Keepalive ping timeout")
                         self._events.put(WebSocketNetworkError())
-        except ShouldClose:
+        except (ShouldClose, QueueShutDown):
             pass
 
     def _wait_until_closed(
