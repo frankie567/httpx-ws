@@ -1,0 +1,21 @@
+tests/test_api.py
+  s_8ed09f1b56b507::t_9741c71f4e55c7 669-703
+httpx_ws/_api.py
+  s_8ed09f1b56b507::t_9741c71f4e55c7 532-535
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9e3b893a000039c5f6477486ac65cb46c93b1708",
+  "prompts": {},
+  "sessions": {
+    "s_8ed09f1b56b507": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d669-edf6-74a1-bd75-07db8c008df3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
