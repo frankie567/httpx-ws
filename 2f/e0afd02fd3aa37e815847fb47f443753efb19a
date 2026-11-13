@@ -1,0 +1,21 @@
+tests/test_ping.py
+  s_8ed09f1b56b507::t_976a7a9f0fe58c 1-17
+httpx_ws/_ping.py
+  s_8ed09f1b56b507::t_976a7a9f0fe58c 22-25,38-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2fe0afd02fd3aa37e815847fb47f443753efb19a",
+  "prompts": {},
+  "sessions": {
+    "s_8ed09f1b56b507": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d669-edf6-74a1-bd75-07db8c008df3",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
