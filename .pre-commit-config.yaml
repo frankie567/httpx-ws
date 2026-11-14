@@ -12,12 +12,12 @@ repos:
       hooks:
           - id: ruff-check
             name: Ruff lint
-            entry: uv run --locked ruff check --fix
+            entry: uv run --locked ruff check --fix --force-exclude
             language: system
             types_or: [python, pyi]
           - id: ruff-format
             name: Ruff format
-            entry: uv run --locked ruff format
+            entry: uv run --locked ruff format --force-exclude
             language: system
             types_or: [python, pyi]
           - id: ty
@@ -26,3 +26,4 @@ repos:
             language: system
             types_or: [python, pyi, toml]
             pass_filenames: false
+            always_run: true
