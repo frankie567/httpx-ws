@@ -38,6 +38,7 @@ The WebSocketClient class APIs are particularly useful for libraries and applica
 import httpx
 from httpx_ws import AsyncWebSocketClient
 
+
 # Your service SDK
 class MyServiceSDK:
     def __init__(self, websocket_client: AsyncWebSocketClient) -> None:
@@ -48,6 +49,7 @@ class MyServiceSDK:
             await ws.send_text("Hello!")
             response = await ws.receive_text()
             return response
+
 
 # Usage example
 async def main() -> None:

@@ -7,8 +7,6 @@ class HTTPXWSException(Exception):
     Base exception class for HTTPX WS.
     """
 
-    pass
-
 
 class WebSocketUpgradeError(HTTPXWSException):
     """
@@ -49,5 +47,3 @@ class WebSocketNetworkError(HTTPXWSException):
     Raised when a network error occured,
     typically if the underlying stream has closed or timeout.
     """
-
-    pass

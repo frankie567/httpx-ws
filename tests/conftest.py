@@ -1,11 +1,11 @@
 import contextlib
 import pathlib
-import queue
 import tempfile
 from collections.abc import Callable
 from typing import Literal, Protocol
 from unittest.mock import MagicMock
 
+import anyio
 import pytest
 import uvicorn
 from anyio.from_thread import start_blocking_portal
@@ -35,38 +35,32 @@ def server_factory(
 ) -> ServerFactoryFixture:
     @contextlib.contextmanager
     def _server_factory(endpoint: Callable):
-        startup_queue: queue.Queue[bool] = queue.Queue()
-        shutdown_queue: queue.Queue[bool] = queue.Queue()
+        with (
+            start_blocking_portal(backend="asyncio") as portal,
+            tempfile.TemporaryDirectory() as socket_directory,
+        ):
+            socket = str(pathlib.Path(socket_directory) / "socket.sock")
+            app = Starlette(routes=[WebSocketRoute("/ws", endpoint=endpoint)])
+            server = uvicorn.Server(
+                uvicorn.Config(app, uds=socket, ws=websocket_implementation)
+            )
+            task = portal.start_task_soon(server.serve)
 
-        def create_app() -> Starlette:
-            routes = [
-                WebSocketRoute("/ws", endpoint=endpoint),
-            ]
+            async def wait_until_started():
+                with anyio.fail_after(5):
+                    while not server.started:
+                        if task.done():
+                            task.result()
+                            raise RuntimeError(
+                                "Uvicorn stopped before opening its socket"
+                            )
+                        await anyio.sleep(0.01)
 
-            @contextlib.asynccontextmanager
-            async def lifespan(app: Starlette):
-                startup_queue.put(True)
-                yield
-
-            return Starlette(routes=routes, lifespan=lifespan)
-
-        def create_server(app: Starlette, socket: str):
-            config = uvicorn.Config(app, uds=socket, ws=websocket_implementation)
-            return uvicorn.Server(config)
-
-        def on_server_stopped(_task):
-            shutdown_queue.put(True)
-
-        with start_blocking_portal(backend="asyncio") as portal:
-            with tempfile.TemporaryDirectory() as socket_directory:
-                socket = str(pathlib.Path(socket_directory) / "socket.sock")
-                app = create_app()
-                server = create_server(app, socket)
-                task = portal.start_task_soon(server.serve)
-                task.add_done_callback(on_server_stopped)
-                startup_queue.get(True)
+            try:
+                portal.call(wait_until_started)
                 yield socket
+            finally:
                 server.should_exit = True
-                shutdown_queue.get(True)
+                task.result()
 
     return _server_factory

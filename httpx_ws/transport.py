@@ -5,7 +5,8 @@ from types import TracebackType
 
 import anyio
 import wsproto
-from httpcore import AsyncNetworkStream
+from anyio.streams.stapled import StapledObjectStream
+from httpcore import AsyncNetworkStream, ReadError
 from httpx import ASGITransport, AsyncByteStream, Request, Response
 from wsproto.frame_protocol import CloseReason
 
@@ -42,10 +43,10 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
     ) -> None:
         self.app = app
         self.scope = scope
-        self._receive_queue = anyio.streams.stapled.StapledObjectStream(
+        self._receive_queue = StapledObjectStream(
             *anyio.create_memory_object_stream[Message](max_buffer_size=math.inf)
         )
-        self._send_queue = anyio.streams.stapled.StapledObjectStream(
+        self._send_queue = StapledObjectStream(
             *anyio.create_memory_object_stream[Message](max_buffer_size=math.inf)
         )
         self._task_group = task_group
@@ -107,7 +108,12 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         return await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     async def read(self, max_bytes: int, timeout: float | None = None) -> bytes:
-        message: Message = await self.receive(timeout=timeout)
+        try:
+            message = await self.receive(timeout=timeout)
+        except anyio.EndOfStream:
+            return b""
+        except anyio.ClosedResourceError as exc:
+            raise ReadError() from exc
         type = message["type"]
 
         if type not in {"websocket.send", "websocket.close"}:
@@ -170,7 +176,7 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         send = self._send_queue.send
         try:
             await self.app(scope, receive, send)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Report app errors as WebSocket closes.
             message = {
                 "type": "websocket.close",
                 "code": CloseReason.INTERNAL_ERROR,
@@ -196,7 +202,7 @@ class ASGIWebSocketTransport(ASGITransport):
         self._exit_stack: contextlib.AsyncExitStack | None = None
         self._initial_receive_timeout = initial_receive_timeout
 
-    async def __aenter__(self) -> "ASGIWebSocketTransport":
+    async def __aenter__(self) -> typing.Self:
         async with contextlib.AsyncExitStack() as stack:
             self._task_group = await stack.enter_async_context(
                 anyio.create_task_group()
@@ -205,7 +211,7 @@ class ASGIWebSocketTransport(ASGITransport):
 
         return self
 
-    async def __aexit__(
+    async def __aexit__(  # ty: ignore[lost-keyword-for-regular-parameter]
         self,
         exc_type: type[BaseException] | None = None,
         exc_val: BaseException | None = None,
@@ -251,7 +257,7 @@ class ASGIWebSocketTransport(ASGITransport):
         ],
     ) -> None:
         stream = ASGIWebSocketAsyncNetworkStream(
-            self.app,  # type: ignore[arg-type]
+            self.app,  # ty: ignore[invalid-argument-type]
             scope,
             self._task_group,
             self._initial_receive_timeout,

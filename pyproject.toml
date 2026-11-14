@@ -11,17 +11,17 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: AsyncIO",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Internet :: WWW/HTTP :: Session",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
-    "anyio>=4",
+    "anyio>=4.10.0",
     "httpx>=0.23.1",
     "httpcore>=1.0.4",
     "wsproto",
@@ -32,12 +32,10 @@ Documentation = "https://frankie567.github.io/httpx-ws/"
 Source = "https://github.com/frankie567/httpx-ws"
 
 [build-system]
-requires = ["hatchling", "hatch-regex-commit"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-source = "regex_commit"
-commit_extra_args = ["-e"]
 path = "httpx_ws/__init__.py"
 
 [tool.hatch.build.targets.sdist]
@@ -45,19 +43,22 @@ support-legacy = true  # Create setup.py
 
 [dependency-groups]
 dev = [
-    "mypy",
+    "ty",
     "ruff",
     "pytest",
     "pytest-cov",
     "starlette",
     "uvicorn[standard]",
-    "mkdocs-material",
-    "mkdocstrings[python]",
+    "zensical>=0.0.63",
+    "mkdocstrings-python>=2.0.8",
+    "pre-commit",
+    "hatchling",
+    "keepachangelog>=2.0.0",
     "trio",
 ]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 extend-select = ["I", "UP"]

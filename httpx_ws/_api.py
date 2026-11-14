@@ -4,6 +4,7 @@ import contextlib
 import json
 import queue
 import secrets
+import sys
 import threading
 import typing
 
@@ -25,6 +26,14 @@ from ._exceptions import (
 )
 from ._ping import AsyncPingManager, PingManager
 from .transport import ASGIWebSocketAsyncNetworkStream
+
+if sys.version_info >= (3, 13):
+    from queue import ShutDown as QueueShutDown
+else:
+
+    class QueueShutDown(Exception):
+        pass
+
 
 JSONMode = typing.Literal["text", "binary"]
 TaskFunction = typing.TypeVar("TaskFunction")
@@ -106,7 +115,7 @@ class WebSocketSession:
         assert self._executor is not None
         return self._executor, self._should_close_task
 
-    def __enter__(self) -> "WebSocketSession":
+    def __enter__(self) -> typing.Self:
         self._background_receive_task = threading.Thread(
             target=self._background_receive, args=(self._max_message_size_bytes,)
         )
@@ -127,9 +136,17 @@ class WebSocketSession:
 
     def __exit__(self, exc_type, exc, tb):
         self.close()
-        self._background_receive_task.join()
-        if self._background_keepalive_ping_task is not None:
-            self._background_keepalive_ping_task.join()
+        tasks = (self._background_receive_task, self._background_keepalive_ping_task)
+        if sys.version_info >= (3, 13):
+            self._events.shutdown(immediate=True)
+            for task in tasks:
+                if task is not None:
+                    task.join()
+        else:
+            for task in tasks:
+                while task is not None and task.is_alive():
+                    with contextlib.suppress(queue.Empty):
+                        self._events.get(timeout=0.01)
 
     def ping(self, payload: bytes = b"") -> threading.Event:
         """
@@ -291,6 +308,8 @@ class WebSocketSession:
             event = self._events.get(block=True, timeout=timeout)
         except queue.Empty as e:
             raise TimeoutError from e
+        except QueueShutDown as e:
+            raise WebSocketDisconnect() from e
         if isinstance(event, HTTPXWSException):
             raise event
         if isinstance(event, wsproto.events.CloseConnection):
@@ -374,7 +393,7 @@ class WebSocketSession:
         """
         event = self.receive(timeout)
         if isinstance(event, wsproto.events.BytesMessage):
-            return event.data
+            return bytes(event.data)
         raise WebSocketInvalidTypeReceived(event)
 
     def receive_json(
@@ -478,6 +497,7 @@ class WebSocketSession:
             max_bytes: The maximum chunk size to read at each iteration.
         """
         partial_message_buffer: str | bytes | None = None
+        partial_message_size = 0
         try:
             while not self._should_close.is_set():
                 data = self._wait_until_closed(self._read_stream, max_bytes)
@@ -494,6 +514,19 @@ class WebSocketSession:
                     if isinstance(event, wsproto.events.CloseConnection):
                         self._should_close.set()
                     if isinstance(event, wsproto.events.Message):
+                        payload = event.data
+                        partial_message_size += len(
+                            payload.encode() if isinstance(payload, str) else payload
+                        )
+                        if partial_message_size > max_bytes:
+                            disconnect = WebSocketDisconnect(
+                                CloseReason.MESSAGE_TOO_BIG, "Message too big"
+                            )
+                            self.close(disconnect.code, disconnect.reason)
+                            self._events.put(disconnect)
+                            return
+                        if event.message_finished:
+                            partial_message_size = 0
                         # Unfinished message: bufferize
                         if not event.message_finished:
                             if partial_message_buffer is None:
@@ -515,8 +548,9 @@ class WebSocketSession:
                     self._events.put(event)
         except (httpcore.ReadError, httpcore.WriteError, EndOfStream):
             self.close(CloseReason.INTERNAL_ERROR, "Stream error")
-            self._events.put(WebSocketNetworkError())
-        except ShouldClose:
+            with contextlib.suppress(QueueShutDown):
+                self._events.put(WebSocketNetworkError())
+        except (ShouldClose, QueueShutDown):
             pass
 
     def _background_keepalive_ping(
@@ -529,7 +563,10 @@ class WebSocketSession:
                 )
                 if should_close:
                     raise ShouldClose()
-                pong_callback = self.ping()
+                try:
+                    pong_callback = self.ping()
+                except wsproto.utilities.LocalProtocolError:
+                    return
                 if timeout_seconds is not None:
                     acknowledged = self._wait_until_closed(
                         pong_callback.wait, timeout_seconds
@@ -537,7 +574,7 @@ class WebSocketSession:
                     if not acknowledged:
                         self.close(CloseReason.INTERNAL_ERROR, "Keepalive ping timeout")
                         self._events.put(WebSocketNetworkError())
-        except ShouldClose:
+        except (ShouldClose, QueueShutDown):
             pass
 
     def _wait_until_closed(
@@ -550,7 +587,7 @@ class WebSocketSession:
             raise ShouldClose() from e
         else:
             done, _ = concurrent.futures.wait(
-                (todo_task, should_close_task),  # type: ignore[misc]
+                (todo_task, should_close_task),  # ty: ignore[invalid-argument-type]
                 return_when=concurrent.futures.FIRST_COMPLETED,
             )
             if should_close_task in done:
@@ -942,7 +979,7 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
         """
         event = await self.receive(timeout)
         if isinstance(event, wsproto.events.BytesMessage):
-            return event.data
+            return bytes(event.data)
         raise WebSocketInvalidTypeReceived(event)
 
     async def receive_json(
@@ -1049,6 +1086,7 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
             max_bytes: The maximum chunk size to read at each iteration.
         """
         partial_message_buffer: str | bytes | None = None
+        partial_message_size = 0
         try:
             while not self._should_close.is_set():
                 data = await self._read_stream(max_bytes)
@@ -1065,6 +1103,19 @@ class AsyncWebSocketSession(anyio.AsyncContextManagerMixin):
                     if isinstance(event, wsproto.events.CloseConnection):
                         self._should_close.set()
                     if isinstance(event, wsproto.events.Message):
+                        payload = event.data
+                        partial_message_size += len(
+                            payload.encode() if isinstance(payload, str) else payload
+                        )
+                        if partial_message_size > max_bytes:
+                            disconnect = WebSocketDisconnect(
+                                CloseReason.MESSAGE_TOO_BIG, "Message too big"
+                            )
+                            await self.close(disconnect.code, disconnect.reason)
+                            await self._send_event.send(disconnect)
+                            return
+                        if event.message_finished:
+                            partial_message_size = 0
                         # Unfinished message: bufferize
                         if not event.message_finished:
                             if partial_message_buffer is None:
@@ -1142,7 +1193,8 @@ class WebSocketClient(typing.Generic[SyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1175,7 +1227,7 @@ class WebSocketClient(typing.Generic[SyncSession]):
         | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
         keepalive_ping_timeout_seconds: float
         | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
+        session_class: type[SyncSession] = WebSocketSession,  # ty: ignore[invalid-parameter-default]
     ) -> None:
         self.client = client
         self.max_message_size_bytes = max_message_size_bytes
@@ -1251,7 +1303,7 @@ def connect_ws(
     keepalive_ping_timeout_seconds: float
     | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: list[str] | None = None,
-    session_class: type[SyncSession] = WebSocketSession,  # type: ignore[assignment]
+    session_class: type[SyncSession] = WebSocketSession,  # ty: ignore[invalid-parameter-default]
     **kwargs: typing.Any,
 ) -> typing.Generator[SyncSession, None, None]:
     """
@@ -1266,7 +1318,8 @@ def connect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1314,9 +1367,9 @@ def connect_ws(
                     ws.send_text("Hello!")
     """
     if client is None:
-        with httpx.Client() as client:
+        with httpx.Client() as default_client:
             ws_client = WebSocketClient(
-                client=client,
+                client=default_client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,
@@ -1351,7 +1404,8 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1384,7 +1438,7 @@ class AsyncWebSocketClient(typing.Generic[AsyncSession]):
         | None = DEFAULT_KEEPALIVE_PING_INTERVAL_SECONDS,
         keepalive_ping_timeout_seconds: float
         | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
-        session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
+        session_class: type[AsyncSession] = AsyncWebSocketSession,  # ty: ignore[invalid-parameter-default]
     ) -> None:
         self.client = client
         self.max_message_size_bytes = max_message_size_bytes
@@ -1461,7 +1515,7 @@ async def aconnect_ws(
     keepalive_ping_timeout_seconds: float
     | None = DEFAULT_KEEPALIVE_PING_TIMEOUT_SECONDS,
     subprotocols: list[str] | None = None,
-    session_class: type[AsyncSession] = AsyncWebSocketSession,  # type: ignore[assignment]
+    session_class: type[AsyncSession] = AsyncWebSocketSession,  # ty: ignore[invalid-parameter-default]
     **kwargs: typing.Any,
 ) -> typing.AsyncGenerator[AsyncSession, None]:
     """
@@ -1476,7 +1530,8 @@ async def aconnect_ws(
             HTTPX client to use.
             If not provided, a default one will be initialized.
         max_message_size_bytes:
-            Message size in bytes to receive from the server.
+            Maximum size of an incoming WebSocket message in bytes, including
+            all fragments. Larger messages close the connection with code 1009.
             Defaults to 65 KiB.
         queue_size:
             Size of the queue where the received messages will be held
@@ -1524,9 +1579,9 @@ async def aconnect_ws(
                     await ws.send_text("Hello!")
     """
     if client is None:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient() as default_client:
             ws_client = AsyncWebSocketClient(
-                client=client,
+                client=default_client,
                 max_message_size_bytes=max_message_size_bytes,
                 queue_size=queue_size,
                 keepalive_ping_interval_seconds=keepalive_ping_interval_seconds,

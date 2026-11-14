@@ -15,6 +15,7 @@ from starlette.routing import Route, WebSocketRoute
 async def http_hello(request):
     return HTMLResponse("Hello World!")
 
+
 async def ws_hello(websocket):
     await websocket.accept()
     await websocket.send_text("Hello World!")
