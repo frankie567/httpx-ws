@@ -54,6 +54,8 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
         self.connection = wsproto.WSConnection(wsproto.ConnectionType.SERVER)
         self.connection.initiate_upgrade_connection(scope["headers"], scope["path"])
         self._aentered = False
+        self._text_fragments: list[str] = []
+        self._bytes_fragments: list[bytes] = []
 
     async def __aenter__(
         self,
@@ -146,9 +148,17 @@ class ASGIWebSocketAsyncNetworkStream(AsyncNetworkStream):
                     }
                 )
             elif isinstance(event, wsproto.events.TextMessage):
-                await self.send({"type": "websocket.receive", "text": event.data})
+                self._text_fragments.append(event.data)
+                if event.message_finished:
+                    text = "".join(self._text_fragments)
+                    self._text_fragments.clear()
+                    await self.send({"type": "websocket.receive", "text": text})
             elif isinstance(event, wsproto.events.BytesMessage):
-                await self.send({"type": "websocket.receive", "bytes": event.data})
+                self._bytes_fragments.append(event.data)
+                if event.message_finished:
+                    data = b"".join(self._bytes_fragments)
+                    self._bytes_fragments.clear()
+                    await self.send({"type": "websocket.receive", "bytes": data})
             else:
                 raise UnhandledWebSocketEvent(event)
 
