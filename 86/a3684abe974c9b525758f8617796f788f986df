@@ -1,0 +1,19 @@
+.pre-commit-config.yaml
+  s_f4240ea57a3cf1::t_bb23e220349ea8 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86a3684abe974c9b525758f8617796f788f986df",
+  "prompts": {},
+  "sessions": {
+    "s_f4240ea57a3cf1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d946-ff05-7fb0-b990-86812c4f6e92",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
