@@ -5,6 +5,8 @@ categories. Earlier release notes are available in [GitHub Releases](https://git
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14
+
 ### Changed
 
 - Require Python 3.11 or later and support Python 3.15.
@@ -31,5 +33,6 @@ categories. Earlier release notes are available in [GitHub Releases](https://git
 - Avoid hanging on async WebSocket context exit when an AnyIO task is cancelled.
 - Close AnyIO queues when the ASGI transport exits.
 
-[Unreleased]: https://github.com/frankie567/httpx-ws/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/frankie567/httpx-ws/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/frankie567/httpx-ws/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/frankie567/httpx-ws/releases/tag/v0.9.0
