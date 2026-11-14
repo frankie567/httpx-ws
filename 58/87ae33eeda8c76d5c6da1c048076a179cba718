@@ -1,0 +1,21 @@
+MAINTAINERS.md
+  s_f4240ea57a3cf1::t_c162c7294e5f34 1-3
+keys/54D275CAAD0B4AF869D2A65B98CAADC2D251C56F.asc
+  s_f4240ea57a3cf1::t_158a20c638ab9a 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5887ae33eeda8c76d5c6da1c048076a179cba718",
+  "prompts": {},
+  "sessions": {
+    "s_f4240ea57a3cf1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d946-ff05-7fb0-b990-86812c4f6e92",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
