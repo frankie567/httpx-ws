@@ -1,0 +1,21 @@
+README.md
+  s_c2115982418367::t_3af4a4c1201f29 117-118
+.github/workflows/build.yml
+  s_c2115982418367::t_e23ad7fefb957b 152,155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8980c3389ec1a617a762398a5b6932b9f42cc1ef",
+  "prompts": {},
+  "sessions": {
+    "s_c2115982418367": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d67b-8360-71d1-b659-6fce74193372",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
