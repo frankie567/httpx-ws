@@ -149,10 +149,10 @@ jobs:
                   enable-cache: false
             - name: Publish on PyPI
               run: uv publish --trusted-publishing always dist/*.whl dist/*.tar.gz
-            - name: Create release
+            - name: Publish GitHub release
               uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
               with:
-                  draft: true
+                  draft: false
                   bodyFile: dist/httpx-ws-${{ github.ref_name }}-release-notes.md
                   artifacts: dist/*
                   token: ${{ secrets.GITHUB_TOKEN }}

@@ -114,8 +114,8 @@ Use `just docs-serve` to preview the Zensical site and `just docs-build` to buil
 2. Preview the release body with `just release-notes <version>`, then push the branch
    and merge the release PR into `main`.
 3. With the GitHub CLI authenticated, run `just release <PR number>`. This signs and
-   pushes a tag for the exact commit that landed, even if `main` has advanced. CI
-   publishes to PyPI and creates a draft GitHub release after the checks pass.
+   pushes a tag for the exact commit that landed, even if `main` has advanced.
+   After the checks pass, CI publishes to PyPI and then publishes the GitHub release.
 
 The PyPI Trusted Publisher must match `build.yml` and the GitHub `release` environment.
 
