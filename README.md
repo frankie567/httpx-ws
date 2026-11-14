@@ -107,13 +107,16 @@ Use `just docs-serve` to preview the Zensical site and `just docs-build` to buil
 
 ### Publishing a release
 
-Commit the release entries under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
-From a clean checkout with Git signing configured, run `just version patch`,
-`just version minor`, or `just version major`. The recipe updates the version,
-changelog, and lockfile, then creates a signed commit and tag.
+1. Commit the release entries under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
+   From a clean release branch with Git signing configured, run `just version patch`,
+   `just version minor`, or `just version major`. The recipe updates the version,
+   changelog, and lockfile and creates a signed commit.
+2. Preview the release body with `just release-notes <version>`, then push the branch
+   and merge the release PR into `main`.
+3. With the GitHub CLI authenticated, run `just release <PR number>`. This signs and
+   pushes a tag for the exact commit that landed, even if `main` has advanced. CI
+   publishes to PyPI and creates a draft GitHub release after the checks pass.
 
-Review the commit and preview the release body with `just release-notes <version>`.
-Push the commit and tag to publish to PyPI and create a draft GitHub release.
 The PyPI Trusted Publisher must match `build.yml` and the GitHub `release` environment.
 
 ## License
