@@ -338,6 +338,49 @@ class TestASGIWebSocketTransport:
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("concurrent", [False, True])
+async def test_websocket_request_scopes_are_independent(concurrent):
+    async def app(scope, receive, send):
+        assert (await receive())["type"] == "websocket.connect"
+        await send({"type": "websocket.accept"})
+        await send(
+            {
+                "type": "websocket.send",
+                "text": "|".join(
+                    (
+                        scope["path"],
+                        scope["query_string"].decode(),
+                        dict(scope["headers"])[b"x-test-name"].decode(),
+                    )
+                ),
+            }
+        )
+        await receive()
+
+    results = {}
+    names = ["first", "second", "third", "fourth"]
+    async with httpx.AsyncClient(
+        transport=ASGIWebSocketTransport(app), base_url="http://test"
+    ) as client:
+
+        async def connect(name):
+            async with aconnect_ws(
+                f"/{name}?name={name}", client, headers={"x-test-name": name}
+            ) as websocket:
+                results[name] = await websocket.receive_text()
+
+        if concurrent:
+            async with create_task_group() as task_group:
+                for name in names:
+                    task_group.start_soon(connect, name)
+        else:
+            for name in names:
+                await connect(name)
+
+    assert results == {name: f"/{name}|name={name}|{name}" for name in names}
+
+
+@pytest.mark.anyio
 async def test_subprotocol_support():
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept("custom_protocol")

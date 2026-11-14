@@ -250,6 +250,7 @@ class ASGIWebSocketTransport(ASGITransport):
 
     async def _create_asgi_websocket_async_network_stream(
         self,
+        scope: Scope,
         *,
         task_status: anyio.abc.TaskStatus[
             tuple["ASGIWebSocketAsyncNetworkStream", bytes]
@@ -257,7 +258,7 @@ class ASGIWebSocketTransport(ASGITransport):
     ) -> None:
         stream = ASGIWebSocketAsyncNetworkStream(
             self.app,  # ty: ignore[invalid-argument-type]
-            self.scope,
+            scope,
             self._task_group,
             self._initial_receive_timeout,
         )
@@ -274,7 +275,7 @@ class ASGIWebSocketTransport(ASGITransport):
 
         self.scope = scope
         stream, accept_response = await self._task_group.start(
-            self._create_asgi_websocket_async_network_stream
+            self._create_asgi_websocket_async_network_stream, scope
         )
         accept_response_lines = accept_response.decode("utf-8").splitlines()
         headers = [
