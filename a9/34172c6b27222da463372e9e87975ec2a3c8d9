@@ -1,0 +1,27 @@
+README.md
+  s_c2115982418367::t_06f5b79261dd41 110-118
+justfile
+  s_c2115982418367::t_5fbf5b83471b36 52-56,62
+  s_c2115982418367::t_7376290c1d6c53 57
+  s_c2115982418367::t_3c3729bcc20497 48-51,58-61,63-80
+  s_c2115982418367::t_1f87770d918b5d 81
+.github/workflows/build.yml
+  s_c2115982418367::t_7983a00958b9af 66,71-73
+  s_c2115982418367::t_4dba76392698f6 54,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a934172c6b27222da463372e9e87975ec2a3c8d9",
+  "prompts": {},
+  "sessions": {
+    "s_c2115982418367": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d67b-8360-71d1-b659-6fce74193372",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "François Voron <me@fvoron.com>"
+    }
+  }
+}
